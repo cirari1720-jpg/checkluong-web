@@ -4,11 +4,64 @@ import { FormEvent, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 
-export default function AdminOrdersPage() {
-    const router = useRouter();
+type Order = {
+  id: number;
+  order_date: string;
+  order_code: string;
+  staff_name: string;
+  customer_name: string;
+  amount: number;
+  tip: number;
+  note: string | null;
+  created_at: string;
+};
+
+const STAFF = [
+  "Q",
+  "Zak",
+  "Mthien",
+  "Vẹt",
+  "Ginz",
+  "Mika",
+  "Pi",
+  "Raev",
+  "24",
+  "Anwir",
+  "Byw",
+  "Cae",
+  "Elis",
+  "Dương",
+  "ED",
+  "Mỏ",
+  "Hàn",
+  "K",
+  "Kz",
+  "Min",
+  "Mon",
+  "Nam",
+  "Pppp",
+  "Sena",
+  "Tia",
+  "Tèo",
+  "Vi",
+  "W",
+  "Zịt",
+  "Hoàng Bảo",
+  "Haru",
+];
+
+export default function OrdersPage() {
+  const router = useRouter();
   const supabase = createClient();
 
-  const [checkingRole, setCheckingRole] = useState(true);
+  const [orders, setOrders] = useState<Order[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+
+  const [role, setRole] = useState("");
+  const [profileName, setProfileName] = useState("");
+
+  // Form nhập đơn
   const [orderDate, setOrderDate] = useState("");
   const [orderCode, setOrderCode] = useState("");
   const [staffName, setStaffName] = useState("");
@@ -17,10 +70,14 @@ export default function AdminOrdersPage() {
   const [tip, setTip] = useState("");
   const [note, setNote] = useState("");
 
-  const [loading, setLoading] = useState(false);
-  const [message, setMessage] = useState("");
-   useEffect(() => {
-    async function checkRole() {
+  const [submitting, setSubmitting] = useState(false);
+  const [success, setSuccess] = useState("");
+
+  async function loadOrders() {
+    try {
+      setLoading(true);
+      setError("");
+
       const {
         data: { user },
       } = await supabase.auth.getUser();
@@ -30,29 +87,45 @@ export default function AdminOrdersPage() {
         return;
       }
 
-      const { data: profile, error } = await supabase
+      // Lấy role + tên
+      const { data: profile, error: profileError } = await supabase
         .from("profiles")
-        .select("role")
+        .select("role, name")
         .eq("id", user.id)
         .single();
 
-      if (error || profile?.role !== "admin") {
-        router.push("/orders");
-        return;
+      if (profileError) {
+        throw new Error("Không lấy được thông tin tài khoản");
       }
 
-      setCheckingRole(false);
+      setRole(profile.role);
+      setProfileName(profile.name || "");
+
+      // Lấy đơn qua API
+      const response = await fetch("/api/orders");
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || "Không thể tải dữ liệu");
+      }
+
+      setOrders(data);
+    } catch (err) {
+      setError(
+        err instanceof Error ? err.message : "Có lỗi xảy ra"
+      );
+    } finally {
+      setLoading(false);
     }
+  }
 
-    checkRole();
-  }, [router, supabase]);
+  async function handleSubmitOrder(e: FormEvent<HTMLFormElement>) {
+    e.preventDefault();
 
-  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
-
-    event.preventDefault();
-
-    setLoading(true);
-    setMessage("");
+    setError("");
+    setSuccess("");
+    setSubmitting(true);
 
     try {
       const response = await fetch("/api/orders", {
@@ -71,192 +144,334 @@ export default function AdminOrdersPage() {
         }),
       });
 
-      const result = await response.json();
+      const data = await response.json();
 
       if (!response.ok) {
-        throw new Error(result.error || "Không thể lưu đơn");
+        throw new Error(data.error || "Không thể nhập đơn");
       }
 
-      setMessage("Đã lưu đơn thành công!");
+      setSuccess("Nhập đơn thành công!");
 
+      // Xóa form
+      setOrderDate("");
       setOrderCode("");
       setStaffName("");
       setCustomerName("");
       setAmount("");
       setTip("");
       setNote("");
-    } catch (error) {
-      setMessage(
-        error instanceof Error
-          ? error.message
-          : "Có lỗi xảy ra"
+
+      // Tải lại danh sách
+      await loadOrders();
+    } catch (err) {
+      setError(
+        err instanceof Error ? err.message : "Có lỗi xảy ra"
       );
     } finally {
-      setLoading(false);
+      setSubmitting(false);
     }
   }
-  if (checkingRole) {
-    return <p style={{ padding: 40 }}>Đang kiểm tra quyền...</p>;
+
+  async function handleLogout() {
+    await supabase.auth.signOut();
+    router.push("/login");
+    router.refresh();
   }
+
+  useEffect(() => {
+    loadOrders();
+  }, []);
 
   return (
     <main
       style={{
-        maxWidth: 700,
-        margin: "40px auto",
-        padding: "0 20px",
+        padding: "40px",
+        maxWidth: "1200px",
+        margin: "0 auto",
       }}
     >
-      <h1>Admin - Nhập đơn hàng</h1>
+      <h1>Danh sách đơn hàng</h1>
 
-      <form
-        onSubmit={handleSubmit}
-        style={{
-          display: "flex",
-          flexDirection: "column",
-          gap: 16,
-          marginTop: 30,
-        }}
-      >
-        <label>
-          Ngày đơn
-          <input
-            type="date"
-            value={orderDate}
-            onChange={(e) => setOrderDate(e.target.value)}
-            required
-            style={{
-              display: "block",
-              width: "100%",
-              padding: 10,
-              marginTop: 5,
-            }}
-          />
-        </label>
+      <p style={{ marginBottom: "20px" }}>
+        Tài khoản: <strong>{profileName || "..."}</strong>
+        {" · "}
+        Quyền: <strong>{role || "..."}</strong>
+      </p>
 
-        <label>
-          Mã đơn
-          <input
-            type="text"
-            value={orderCode}
-            onChange={(e) => setOrderCode(e.target.value)}
-            placeholder="VD: TEST002"
-            required
-            style={{
-              display: "block",
-              width: "100%",
-              padding: 10,
-              marginTop: 5,
-            }}
-          />
-        </label>
-
-        <label>
-          Staff
-          <input
-            type="text"
-            value={staffName}
-            onChange={(e) => setStaffName(e.target.value)}
-            placeholder="VD: Admin"
-            required
-            style={{
-              display: "block",
-              width: "100%",
-              padding: 10,
-              marginTop: 5,
-            }}
-          />
-        </label>
-
-        <label>
-          Tên khách hàng
-          <input
-            type="text"
-            value={customerName}
-            onChange={(e) => setCustomerName(e.target.value)}
-            placeholder="VD: Khách test"
-            style={{
-              display: "block",
-              width: "100%",
-              padding: 10,
-              marginTop: 5,
-            }}
-          />
-        </label>
-
-        <label>
-          Số tiền
-          <input
-            type="number"
-            value={amount}
-            onChange={(e) => setAmount(e.target.value)}
-            placeholder="VD: 80000"
-            min="0"
-            required
-            style={{
-              display: "block",
-              width: "100%",
-              padding: 10,
-              marginTop: 5,
-            }}
-          />
-        </label>
-
-        <label>
-          Tip
-          <input
-            type="number"
-            value={tip}
-            onChange={(e) => setTip(e.target.value)}
-            placeholder="VD: 3000"
-            min="0"
-            style={{
-              display: "block",
-              width: "100%",
-              padding: 10,
-              marginTop: 5,
-            }}
-          />
-        </label>
-
-        <label>
-          Ghi chú
-          <textarea
-            value={note}
-            onChange={(e) => setNote(e.target.value)}
-            placeholder="Ghi chú..."
-            rows={4}
-            style={{
-              display: "block",
-              width: "100%",
-              padding: 10,
-              marginTop: 5,
-            }}
-          />
-        </label>
-
+      <div style={{ marginBottom: "20px" }}>
         <button
-          type="submit"
-          disabled={loading}
+          onClick={loadOrders}
           style={{
-            padding: "12px 20px",
-            cursor: loading ? "not-allowed" : "pointer",
-            fontWeight: "bold",
+            padding: "10px 16px",
+            marginRight: "10px",
+            cursor: "pointer",
           }}
         >
-          {loading ? "Đang lưu..." : "Lưu đơn"}
+          Làm mới
         </button>
 
-        {message && (
-          <p
+        <button
+          onClick={handleLogout}
+          style={{
+            padding: "10px 16px",
+            cursor: "pointer",
+          }}
+        >
+          Đăng xuất
+        </button>
+      </div>
+
+      {/* =========================================
+          FORM NHẬP ĐƠN - CHỈ ADMIN THẤY
+          ========================================= */}
+      {role === "admin" && (
+        <section
+          style={{
+            border: "1px solid #ccc",
+            borderRadius: "10px",
+            padding: "24px",
+            marginBottom: "30px",
+            background: "#fff",
+          }}
+        >
+          <h2 style={{ marginTop: 0 }}>
+            Nhập đơn hàng
+          </h2>
+
+          <form
+            onSubmit={handleSubmitOrder}
             style={{
-              fontWeight: "bold",
+              display: "grid",
+              gridTemplateColumns:
+                "repeat(2, minmax(0, 1fr))",
+              gap: "16px",
             }}
           >
-            {message}
-          </p>
-        )}
-      </form>
+            <div>
+              <label>Ngày</label>
+              <input
+                type="date"
+                value={orderDate}
+                onChange={(e) =>
+                  setOrderDate(e.target.value)
+                }
+                required
+                style={inputStyle}
+              />
+            </div>
+
+            <div>
+              <label>Mã đơn</label>
+              <input
+                type="text"
+                value={orderCode}
+                onChange={(e) =>
+                  setOrderCode(e.target.value)
+                }
+                placeholder="VD: DH001"
+                required
+                style={inputStyle}
+              />
+            </div>
+
+            <div>
+              <label>Staff</label>
+              <select
+                value={staffName}
+                onChange={(e) =>
+                  setStaffName(e.target.value)
+                }
+                required
+                style={inputStyle}
+              >
+                <option value="">
+                  -- Chọn staff --
+                </option>
+
+                {STAFF.map((staff) => (
+                  <option key={staff} value={staff}>
+                    {staff}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div>
+              <label>Khách hàng</label>
+              <input
+                type="text"
+                value={customerName}
+                onChange={(e) =>
+                  setCustomerName(e.target.value)
+                }
+                placeholder="Tên khách hàng"
+                required
+                style={inputStyle}
+              />
+            </div>
+
+            <div>
+              <label>Số tiền</label>
+              <input
+                type="number"
+                min="0"
+                value={amount}
+                onChange={(e) =>
+                  setAmount(e.target.value)
+                }
+                placeholder="80000"
+                required
+                style={inputStyle}
+              />
+            </div>
+
+            <div>
+              <label>Tip</label>
+              <input
+                type="number"
+                min="0"
+                value={tip}
+                onChange={(e) =>
+                  setTip(e.target.value)
+                }
+                placeholder="3000"
+                style={inputStyle}
+              />
+            </div>
+
+            <div style={{ gridColumn: "1 / -1" }}>
+              <label>Ghi chú</label>
+              <input
+                type="text"
+                value={note}
+                onChange={(e) =>
+                  setNote(e.target.value)
+                }
+                placeholder="Ghi chú đơn hàng"
+                style={inputStyle}
+              />
+            </div>
+
+            <div style={{ gridColumn: "1 / -1" }}>
+              <button
+                type="submit"
+                disabled={submitting}
+                style={{
+                  padding: "12px 20px",
+                  cursor: submitting
+                    ? "not-allowed"
+                    : "pointer",
+                  fontWeight: "bold",
+                }}
+              >
+                {submitting
+                  ? "Đang nhập..."
+                  : "Nhập đơn"}
+              </button>
+            </div>
+          </form>
+        </section>
+      )}
+
+      {success && (
+        <p style={{ color: "green", fontWeight: "bold" }}>
+          {success}
+        </p>
+      )}
+
+      {error && (
+        <p style={{ color: "red" }}>
+          Lỗi: {error}
+        </p>
+      )}
+
+      {loading && <p>Đang tải dữ liệu...</p>}
+
+      {!loading && !error && orders.length === 0 && (
+        <p>Chưa có đơn hàng nào.</p>
+      )}
+
+      {!loading && !error && orders.length > 0 && (
+        <table
+          style={{
+            width: "100%",
+            borderCollapse: "collapse",
+          }}
+        >
+          <thead>
+            <tr>
+              <th style={thStyle}>Ngày</th>
+              <th style={thStyle}>Mã đơn</th>
+              <th style={thStyle}>Staff</th>
+              <th style={thStyle}>Khách hàng</th>
+              <th style={thStyle}>Số tiền</th>
+              <th style={thStyle}>Tip</th>
+              <th style={thStyle}>Ghi chú</th>
+            </tr>
+          </thead>
+
+          <tbody>
+            {orders.map((order) => (
+              <tr key={order.id}>
+                <td style={tdStyle}>
+                  {order.order_date}
+                </td>
+
+                <td style={tdStyle}>
+                  {order.order_code}
+                </td>
+
+                <td style={tdStyle}>
+                  {order.staff_name}
+                </td>
+
+                <td style={tdStyle}>
+                  {order.customer_name}
+                </td>
+
+                <td style={tdStyle}>
+                  {Number(order.amount).toLocaleString(
+                    "vi-VN"
+                  )}
+                  đ
+                </td>
+
+                <td style={tdStyle}>
+                  {Number(order.tip).toLocaleString(
+                    "vi-VN"
+                  )}
+                  đ
+                </td>
+
+                <td style={tdStyle}>
+                  {order.note || ""}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      )}
     </main>
   );
 }
+
+const inputStyle = {
+  width: "100%",
+  padding: "10px",
+  marginTop: "6px",
+  border: "1px solid #ccc",
+  borderRadius: "6px",
+  boxSizing: "border-box" as const,
+};
+
+const thStyle = {
+  border: "1px solid #ccc",
+  padding: "10px",
+  textAlign: "left" as const,
+  background: "#f5f5f5",
+};
+
+const tdStyle = {
+  border: "1px solid #ccc",
+  padding: "10px",
+};

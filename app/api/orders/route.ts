@@ -116,11 +116,11 @@ export async function POST(request: Request) {
 
   // Kiểm tra staff có tồn tại trong profiles không
   const { data: staffProfile, error: staffError } = await supabase
-    .from("profiles")
-    .select("name")
-    .eq("role", "staff")
-    .ilike("name", staffNameInput)
-    .single();
+  .from("profiles")
+  .select("name")
+  .eq("role", "staff")
+  .ilike("name", staffNameInput)
+  .single();
 
   if (staffError || !staffProfile?.name) {
   console.log("===== STAFF DEBUG =====");

@@ -92,13 +92,12 @@ export async function POST(request: Request) {
   }
 
   const role = await getCurrentUserRole();
-  console.log("===== KPI DEBUG =====");
-console.log("ROLE =", role);
-console.log("====================");
 
   if (role !== "admin") {
     return NextResponse.json(
-      { error: "Chỉ admin mới được cập nhật KPI" },
+      {
+        error: "Chỉ admin mới được cập nhật KPI",
+      },
       { status: 403 }
     );
   }
@@ -111,12 +110,16 @@ console.log("====================");
 
   if (!staffName) {
     return NextResponse.json(
-      { error: "Vui lòng chọn staff" },
+      {
+        error: "Vui lòng chọn staff",
+      },
       { status: 400 }
     );
   }
 
-  const updateData: Record<string, number> = {};
+  const updateData: Record<string, any> = {
+    staff_name: staffName,
+  };
 
   for (const field of KPI_FIELDS) {
     if (body[field] !== undefined) {
@@ -137,14 +140,22 @@ console.log("====================");
 
   const { data, error } = await supabase
     .from("staff_kpi")
-    .update(updateData)
-    .eq("staff_name", staffName)
+    .upsert(updateData, {
+      onConflict: "staff_name",
+    })
     .select()
     .single();
 
   if (error) {
+    console.error(
+      "POST /api/kpi ERROR:",
+      error
+    );
+
     return NextResponse.json(
-      { error: error.message },
+      {
+        error: error.message,
+      },
       { status: 500 }
     );
   }

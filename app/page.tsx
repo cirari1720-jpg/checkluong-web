@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { createClient } from "@/lib/supabase/client";
 
 /* =========================================================
    DANH SÁCH STAFF
@@ -1148,6 +1149,8 @@ function StatCard({
 ========================================================= */
 
 export default function Home() {
+  const supabase = createClient();
+
   const [database, setDatabase] =
     useState<Database>(
       createDatabase
@@ -1178,82 +1181,366 @@ export default function Home() {
   ======================================================= */
 
   useEffect(() => {
+  async function loadData() {
     try {
-      const saved =
-        localStorage.getItem(
-          "kpi-database-v3"
-        );
+      const [
+        ordersResponse,
+        kpiResponse,
+        penaltiesResponse,
+      ] = await Promise.all([
+        fetch("/api/orders", {
+          method: "GET",
+          cache: "no-store",
+        }),
 
-      if (saved) {
-        setDatabase(
-          normalizeDatabase(
-            JSON.parse(saved)
-          )
+        fetch("/api/kpi", {
+          method: "GET",
+          cache: "no-store",
+        }),
+
+        fetch("/api/staff-penalties", {
+          method: "GET",
+          cache: "no-store",
+        }),
+      ]);
+
+      if (!ordersResponse.ok) {
+        console.error(
+          "Không thể tải đơn:",
+          await ordersResponse.text()
         );
       }
+
+      if (!kpiResponse.ok) {
+        console.error(
+          "Không thể tải KPI:",
+          await kpiResponse.text()
+        );
+      }
+
+      if (!penaltiesResponse.ok) {
+        console.error(
+          "Không thể tải phạt:",
+          await penaltiesResponse.text()
+        );
+      }
+
+      const orders = ordersResponse.ok
+        ? await ordersResponse.json()
+        : [];
+
+      const kpiData = kpiResponse.ok
+        ? await kpiResponse.json()
+        : [];
+
+      const penaltiesData =
+        penaltiesResponse.ok
+          ? await penaltiesResponse.json()
+          : [];
+
+      const nextDatabase =
+        createDatabase();
+
+      /* =================================================
+         ORDERS
+      ================================================= */
+
+      if (Array.isArray(orders)) {
+        orders.forEach((order: any) => {
+          const staffName = String(
+            order.staff_name || ""
+          ).trim();
+
+          if (!staffName) {
+            return;
+          }
+
+          if (
+            !STAFF.includes(
+              staffName as any
+            )
+          ) {
+            return;
+          }
+
+          const person =
+            nextDatabase[staffName];
+
+          if (!person) {
+            return;
+          }
+
+          person.staffOrders.push({
+            id: String(
+              order.order_code ||
+              order.id
+            ),
+            amount: Number(
+              order.amount || 0
+            ),
+          });
+        });
+      }
+
+      /* =================================================
+         KPI
+      ================================================= */
+
+      if (Array.isArray(kpiData)) {
+        kpiData.forEach((kpi: any) => {
+          const staffName = String(
+            kpi.staff_name || ""
+          ).trim();
+
+          if (!staffName) {
+            return;
+          }
+
+          if (
+            !STAFF.includes(
+              staffName as any
+            )
+          ) {
+            return;
+          }
+
+          const person =
+            nextDatabase[staffName];
+
+          if (!person) {
+            return;
+          }
+
+          person.kpi = {
+            page: Number(
+              kpi.page ?? 0
+            ),
+
+            photo: Number(
+              kpi.photo ?? 0
+            ),
+
+            editPhoto: Number(
+              kpi.edit_photo ?? 0
+            ),
+
+            video: Number(
+              kpi.video ?? 0
+            ),
+
+            editVideo: Number(
+              kpi.edit_video ?? 0
+            ),
+
+            harem: Number(
+              kpi.harem ?? 0
+            ),
+
+            hostDan: Number(
+              kpi.host_dan ?? 0
+            ),
+
+            hostTreo: Number(
+              kpi.host_treo ?? 0
+            ),
+          };
+        });
+      }
+
+      /* =================================================
+         PENALTIES
+      ================================================= */
+
+      if (
+        Array.isArray(
+          penaltiesData
+        )
+      ) {
+        penaltiesData.forEach(
+          (penalty: any) => {
+            const staffName = String(
+              penalty.staff_name || ""
+            ).trim();
+
+            if (!staffName) {
+              return;
+            }
+
+            if (
+              !STAFF.includes(
+                staffName as any
+              )
+            ) {
+              return;
+            }
+
+            const person =
+              nextDatabase[
+                staffName
+              ];
+
+            if (!person) {
+              return;
+            }
+
+            person.penalties.push({
+              id: String(
+                penalty.id
+              ),
+
+              error: String(
+                penalty.error || ""
+              ),
+
+              amount: Number(
+                penalty.amount || 0
+              ),
+
+              form: String(
+                penalty.form || ""
+              ),
+            });
+          }
+        );
+      }
+
+      setDatabase(
+        nextDatabase
+      );
+
+      console.log(
+        "===== SUPABASE LOAD ====="
+      );
+
+      console.log(
+        "ORDERS:",
+        orders
+      );
+
+      console.log(
+        "KPI:",
+        kpiData
+      );
+
+      console.log(
+        "PENALTIES:",
+        penaltiesData
+      );
+
+      console.log(
+        "DATABASE:",
+        nextDatabase
+      );
+
+      console.log(
+        "========================="
+      );
+
+      setLoaded(true);
     } catch (error) {
       console.error(
-        "Không thể đọc dữ liệu:",
+        "Không thể tải dữ liệu:",
         error
       );
-    }
 
-    setLoaded(true);
-  }, []);
+      setLoaded(true);
+    }
+  }
+
+  loadData();
+}, []);
 
   /* =======================================================
      SAVE
   ======================================================= */
 
-  useEffect(() => {
-    if (!loaded) {
-      return;
-    }
-
-    try {
-      localStorage.setItem(
-        "kpi-database-v3",
-        JSON.stringify(database)
-      );
-    } catch (error) {
-      console.error(
-        "Không thể lưu dữ liệu:",
-        error
-      );
-    }
-  }, [database, loaded]);
-
   /* =======================================================
      LOGIN
   ======================================================= */
 
-  function login() {
-    const code =
-      loginCode
-        .trim()
-        .toUpperCase();
+  async function login() {
+  const code =
+    loginCode
+      .trim()
+      .toUpperCase();
 
-    const account =
-      LOGIN_ACCOUNTS[code];
+  const account =
+    LOGIN_ACCOUNTS[code];
 
-    if (!account) {
-      alert(
-        "Mã truy cập không đúng."
-      );
-      return;
-    }
-
-    setCurrentUser(account);
-    setLoginCode("");
-    setActiveTab("overview");
-
-    if (account.role === "admin") {
-      setSelectedPerson("Q");
-    } else {
-      setSelectedPerson(account.name);
-    }
+  if (!account) {
+    alert("Mã truy cập không đúng.");
+    return;
   }
 
+  /*
+   * Mỗi mã truy cập cũ sẽ tương ứng
+   * với một tài khoản Supabase Auth.
+   *
+   * TẠM THỜI chỉ cấu hình Q và Admin.
+   */
+  const SUPABASE_LOGIN: Record<
+    string,
+    {
+      email: string;
+      password: string;
+    }
+  > = {
+    Q1811: {
+      email: "Q@gmail.com",
+      password: "SoulHunter2026",
+    },
+
+    ZEFROSTY: {
+      email: "cirari1720@gmail.com",
+      password: "FoxxWxSx070503",
+    },
+  };
+
+  const supabaseLogin =
+    SUPABASE_LOGIN[code];
+
+  if (!supabaseLogin) {
+    alert(
+      "Tài khoản này chưa được kết nối với Supabase."
+    );
+    return;
+  }
+
+  const { error } =
+    await supabase.auth.signInWithPassword({
+      email: supabaseLogin.email,
+      password: supabaseLogin.password,
+    });
+
+  if (error) {
+    console.error(
+      "Supabase login error:",
+      error
+    );
+
+    alert(
+      "Không thể đăng nhập Supabase: " +
+        error.message
+    );
+
+    return;
+  }
+
+  /*
+   * Supabase đã tạo session.
+   * Giữ lại hệ thống currentUser hiện tại
+   * để giao diện cũ vẫn hoạt động.
+   */
+  setCurrentUser(account);
+  setLoginCode("");
+  setActiveTab("overview");
+
+  if (account.role === "admin") {
+    setSelectedPerson("Q");
+  } else {
+    setSelectedPerson(account.name);
+  }
+}
   /* =======================================================
      LOGOUT
   ======================================================= */
@@ -1295,50 +1582,526 @@ export default function Home() {
     ...pageOrders,
   ];
 
-  /* =======================================================
-     UPDATE PERSON
-  ======================================================= */
+/* =======================================================
+   UPDATE PERSON — ADMIN → SUPABASE
+======================================================= */
 
-  function updatePerson(
-    updater: (
-      person: PersonData
-    ) => PersonData
-  ) {
-    if (!isAdmin) {
-      return;
-    }
-
-    setDatabase((previous) => {
-      const current =
-        normalizePerson(
-          previous[selectedPerson]
-        );
-
-      return {
-        ...previous,
-
-        [selectedPerson]:
-          normalizePerson(
-            updater(current)
-          ),
-      };
-    });
+async function updatePerson(
+  updater: (person: PersonData) => PersonData
+) {
+  if (!isAdmin) {
+    return;
   }
 
-  /* =======================================================
-     STATS
-  ======================================================= */
+  const staffName = selectedPerson;
 
-  const totalOrderMoney =
-    orderMoney(allOrders);
+  const previousPerson = normalizePerson(
+    database[staffName]
+  );
 
-  const totalPenaltyMoney =
-    totalPenalty(viewingPerson);
+  const updatedPerson = normalizePerson(
+    updater(previousPerson)
+  );
 
-  const totalKpiValue =
-    pagePerson
-      ? viewingPerson.kpi.page
-      : totalKpi(viewingPerson);
+  /* ==========================================
+     1. CẬP NHẬT UI NGAY
+  ========================================== */
+
+  setDatabase((previous) => ({
+    ...previous,
+    [staffName]: updatedPerson,
+  }));
+
+  try {
+    /* ==========================================
+       2. ORDERS — STAFF
+    ========================================== */
+
+    const oldStaffOrders =
+      previousPerson.staffOrders ?? [];
+
+    const newStaffOrders =
+      updatedPerson.staffOrders ?? [];
+
+    /*
+     * Đồng bộ từng order với API.
+     *
+     * API /api/orders cần hỗ trợ:
+     * POST = tạo
+     * PUT = cập nhật
+     * DELETE = xóa
+     */
+
+    const oldStaffMap = new Map(
+      oldStaffOrders.map((order) => [
+        order.id,
+        order,
+      ])
+    );
+
+    const newStaffMap = new Map(
+      newStaffOrders.map((order) => [
+        order.id,
+        order,
+      ])
+    );
+
+    /* ==========================================
+       2A. TẠO / CẬP NHẬT ĐƠN STAFF
+    ========================================== */
+
+    for (const order of newStaffOrders) {
+      const oldOrder =
+        oldStaffMap.get(order.id);
+
+      /* Đơn mới */
+      if (!oldOrder) {
+        const response = await fetch(
+          "/api/orders",
+          {
+            method: "POST",
+            headers: {
+              "Content-Type":
+                "application/json",
+            },
+            body: JSON.stringify({
+              order_date:
+                new Date()
+                  .toISOString()
+                  .split("T")[0],
+
+              order_code:
+                order.id,
+
+              staff_name:
+                staffName,
+
+              customer_name: "",
+
+              amount:
+                Number(order.amount || 0),
+
+              tip: 0,
+
+              note: "",
+            }),
+          }
+        );
+
+        if (!response.ok) {
+          throw new Error(
+            "Không thể thêm đơn: " +
+              (await response.text())
+          );
+        }
+
+        continue;
+      }
+
+      /* Đơn cũ nhưng bị thay đổi */
+      if (
+        Number(oldOrder.amount || 0) !==
+        Number(order.amount || 0)
+      ) {
+        const response = await fetch(
+          "/api/orders",
+          {
+            method: "PUT",
+            headers: {
+              "Content-Type":
+                "application/json",
+            },
+            body: JSON.stringify({
+              order_code:
+                order.id,
+
+              staff_name:
+                staffName,
+
+              amount:
+                Number(order.amount || 0),
+            }),
+          }
+        );
+
+        if (!response.ok) {
+          throw new Error(
+            "Không thể cập nhật đơn: " +
+              (await response.text())
+          );
+        }
+      }
+    }
+
+    /* ==========================================
+       2B. XÓA ĐƠN STAFF
+    ========================================== */
+
+    for (const oldOrder of oldStaffOrders) {
+      if (
+        !newStaffMap.has(oldOrder.id)
+      ) {
+        const response = await fetch(
+          "/api/orders",
+          {
+            method: "DELETE",
+            headers: {
+              "Content-Type":
+                "application/json",
+            },
+            body: JSON.stringify({
+              order_code:
+                oldOrder.id,
+
+              staff_name:
+                staffName,
+            }),
+          }
+        );
+
+        if (!response.ok) {
+          throw new Error(
+            "Không thể xóa đơn: " +
+              (await response.text())
+          );
+        }
+      }
+    }
+
+    /* ==========================================
+       3. ORDERS — TRỰC PAGE
+    ========================================== */
+
+    const oldPageOrders =
+      previousPerson.pageOrders ?? [];
+
+    const newPageOrders =
+      updatedPerson.pageOrders ?? [];
+
+    const oldPageMap = new Map(
+      oldPageOrders.map((order) => [
+        order.id,
+        order,
+      ])
+    );
+
+    const newPageMap = new Map(
+      newPageOrders.map((order) => [
+        order.id,
+        order,
+      ])
+    );
+
+    /* ==========================================
+       3A. TẠO / CẬP NHẬT ĐƠN TRỰC
+    ========================================== */
+
+    for (const order of newPageOrders) {
+      const oldOrder =
+        oldPageMap.get(order.id);
+
+      /* Đơn trực mới */
+      if (!oldOrder) {
+        const response = await fetch(
+          "/api/orders",
+          {
+            method: "POST",
+            headers: {
+              "Content-Type":
+                "application/json",
+            },
+            body: JSON.stringify({
+              order_date:
+                new Date()
+                  .toISOString()
+                  .split("T")[0],
+
+              order_code:
+                order.id,
+
+              staff_name:
+                staffName,
+
+              customer_name: "",
+
+              amount:
+                Number(order.amount || 0),
+
+              tip: 0,
+
+              note: "",
+
+              order_type: "page",
+            }),
+          }
+        );
+
+        if (!response.ok) {
+          throw new Error(
+            "Không thể thêm đơn trực: " +
+              (await response.text())
+          );
+        }
+
+        continue;
+      }
+
+      /* Đơn trực bị sửa */
+      if (
+        Number(oldOrder.amount || 0) !==
+        Number(order.amount || 0)
+      ) {
+        const response = await fetch(
+          "/api/orders",
+          {
+            method: "PUT",
+            headers: {
+              "Content-Type":
+                "application/json",
+            },
+            body: JSON.stringify({
+              order_code:
+                order.id,
+
+              staff_name:
+                staffName,
+
+              amount:
+                Number(order.amount || 0),
+
+              order_type: "page",
+            }),
+          }
+        );
+
+        if (!response.ok) {
+          throw new Error(
+            "Không thể cập nhật đơn trực: " +
+              (await response.text())
+          );
+        }
+      }
+    }
+
+    /* ==========================================
+       3B. XÓA ĐƠN TRỰC
+    ========================================== */
+
+    for (const oldOrder of oldPageOrders) {
+      if (
+        !newPageMap.has(oldOrder.id)
+      ) {
+        const response = await fetch(
+          "/api/orders",
+          {
+            method: "DELETE",
+            headers: {
+              "Content-Type":
+                "application/json",
+            },
+            body: JSON.stringify({
+              order_code:
+                oldOrder.id,
+
+              staff_name:
+                staffName,
+
+              order_type: "page",
+            }),
+          }
+        );
+
+        if (!response.ok) {
+          throw new Error(
+            "Không thể xóa đơn trực: " +
+              (await response.text())
+          );
+        }
+      }
+    }
+
+    /* ==========================================
+       4. KPI
+    ========================================== */
+
+    const oldKpi =
+      previousPerson.kpi;
+
+    const newKpi =
+      updatedPerson.kpi;
+
+    const kpiChanged =
+      JSON.stringify(oldKpi) !==
+      JSON.stringify(newKpi);
+
+    if (kpiChanged) {
+      const response = await fetch(
+        "/api/kpi",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type":
+              "application/json",
+          },
+          body: JSON.stringify({
+            staff_name:
+              staffName,
+
+            page:
+              Number(newKpi.page || 0),
+
+            photo:
+              Number(newKpi.photo || 0),
+
+            edit_photo:
+              Number(
+                newKpi.editPhoto || 0
+              ),
+
+            video:
+              Number(newKpi.video || 0),
+
+            edit_video:
+              Number(
+                newKpi.editVideo || 0
+              ),
+
+            harem:
+              Number(newKpi.harem || 0),
+
+            host_dan:
+              Number(
+                newKpi.hostDan || 0
+              ),
+
+            host_treo:
+              Number(
+                newKpi.hostTreo || 0
+              ),
+          }),
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error(
+          "Lưu KPI thất bại: " +
+            (await response.text())
+        );
+      }
+    }
+
+    /* ==========================================
+       5. PENALTIES
+    ========================================== */
+
+    const oldPenalties =
+      previousPerson.penalties ?? [];
+
+    const newPenalties =
+      updatedPerson.penalties ?? [];
+
+    const penaltiesChanged =
+      JSON.stringify(oldPenalties) !==
+      JSON.stringify(newPenalties);
+
+    if (penaltiesChanged) {
+      const response = await fetch(
+        "/api/staff-penalties",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type":
+              "application/json",
+          },
+          body: JSON.stringify({
+            staff_name:
+              staffName,
+
+            penalties:
+              newPenalties.map(
+                (penalty) => ({
+                  id:
+                    penalty.id,
+
+                  error:
+                    penalty.error,
+
+                  amount:
+                    Number(
+                      penalty.amount || 0
+                    ),
+
+                  form:
+                    penalty.form,
+                })
+              ),
+          }),
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error(
+          "Lưu phạt thất bại: " +
+            (await response.text())
+        );
+      }
+    }
+
+    /* ==========================================
+       6. HOÀN TẤT
+    ========================================== */
+
+    console.log(
+      "===== SUPABASE UPDATE SUCCESS ====="
+    );
+
+    console.log(
+      "Staff:",
+      staffName
+    );
+
+    console.log(
+      "Updated:",
+      updatedPerson
+    );
+
+  } catch (error) {
+    /* ==========================================
+       ROLLBACK UI
+    ========================================== */
+
+    console.error(
+      "===== SUPABASE UPDATE ERROR =====",
+      error
+    );
+
+    setDatabase((previous) => ({
+      ...previous,
+      [staffName]:
+        previousPerson,
+    }));
+
+    alert(
+      error instanceof Error
+        ? error.message
+        : "Không thể lưu dữ liệu lên Supabase."
+    );
+  }
+}
+/* =======================================================
+   STATS
+======================================================= */
+
+const totalOrderMoney =
+  orderMoney(allOrders);
+
+const totalPenaltyMoney =
+  totalPenalty(viewingPerson);
+
+const totalKpiValue =
+  pagePerson
+    ? viewingPerson.kpi.page
+    : totalKpi(viewingPerson);
 
   /* =======================================================
      LOGIN SCREEN

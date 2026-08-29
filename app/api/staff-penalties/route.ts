@@ -1,6 +1,9 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
-import { getCurrentUserRole } from "@/lib/supabase/auth";
+import {
+  getCurrentUserRole,
+  getCurrentUserName,
+} from "@/lib/supabase/auth";
 
 
 // =====================================================
@@ -49,48 +52,22 @@ export async function GET() {
       });
 
     // Staff chỉ được xem khoản phạt của chính mình
-    if (role === "staff") {
-      const { data: profile, error: profileError } =
-        await supabase
-          .from("profiles")
-          .select("staff_name")
-          .eq("id", user.id)
-          .maybeSingle();
+   if (role === "staff") {
+  const staffName = await getCurrentUserName();
 
-      if (profileError) {
-        console.error(
-          "GET PROFILE ERROR:",
-          profileError
-        );
-
-        return NextResponse.json(
-          {
-            error: profileError.message,
-          },
-          {
-            status: 500,
-          }
-        );
+  if (!staffName) {
+    return NextResponse.json(
+      {
+        error: "Staff chưa có tên trong profiles",
+      },
+      {
+        status: 403,
       }
+    );
+  }
 
-      if (!profile?.staff_name) {
-        return NextResponse.json(
-          {
-            error:
-              "Staff chưa có tên trong profiles",
-          },
-          {
-            status: 403,
-          }
-        );
-      }
-
-      query = query.eq(
-        "staff_name",
-        profile.staff_name
-      );
-    }
-
+  query = query.eq("staff_name", staffName);
+}
     const { data, error } = await query;
 
     if (error) {

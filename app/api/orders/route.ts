@@ -81,7 +81,10 @@ export async function GET() {
     }
 
     if (!profile) {
-      return jsonError("Không tìm thấy thông tin tài khoản.", 403);
+      return jsonError(
+        "Không tìm thấy thông tin tài khoản.",
+        403
+      );
     }
 
     let query = supabase
@@ -103,28 +106,45 @@ export async function GET() {
     }
 
     // ADMIN được xem tất cả
-    if (profile.role !== "admin" && profile.role !== "staff") {
-      return jsonError("Role tài khoản không hợp lệ.", 403);
+    if (
+      profile.role !== "admin" &&
+      profile.role !== "staff"
+    ) {
+      return jsonError(
+        "Role tài khoản không hợp lệ.",
+        403
+      );
     }
 
     const { data, error } = await query;
 
     if (error) {
-      console.error("GET /api/orders error:", error);
+      console.error(
+        "GET /api/orders error:",
+        error
+      );
 
       return NextResponse.json(
         {
           error: error.message,
         },
-        { status: 500 }
+        {
+          status: 500,
+        }
       );
     }
 
-    return NextResponse.json(data ?? [], {
-      status: 200,
-    });
+    return NextResponse.json(
+      data ?? [],
+      {
+        status: 200,
+      }
+    );
   } catch (error) {
-    console.error("GET /api/orders exception:", error);
+    console.error(
+      "GET /api/orders exception:",
+      error
+    );
 
     return jsonError(
       error instanceof Error
@@ -141,16 +161,25 @@ export async function GET() {
 // CHỈ ADMIN
 // ======================================================
 
-export async function POST(request: NextRequest) {
+export async function POST(
+  request: NextRequest
+) {
   try {
-    const { user, profile } = await getCurrentUser();
+    const { user, profile } =
+      await getCurrentUser();
 
     if (!user) {
-      return jsonError("Bạn chưa đăng nhập.", 401);
+      return jsonError(
+        "Bạn chưa đăng nhập.",
+        401
+      );
     }
 
     if (!profile) {
-      return jsonError("Không tìm thấy thông tin tài khoản.", 403);
+      return jsonError(
+        "Không tìm thấy thông tin tài khoản.",
+        403
+      );
     }
 
     if (profile.role !== "admin") {
@@ -160,7 +189,8 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const body = (await request.json()) as OrderBody;
+    const body =
+      (await request.json()) as OrderBody;
 
     const {
       order_date,
@@ -172,73 +202,121 @@ export async function POST(request: NextRequest) {
       note,
     } = body;
 
-    if (!staff_name || !String(staff_name).trim()) {
-      return jsonError("Vui lòng chọn staff.");
+    if (
+      !staff_name ||
+      !String(staff_name).trim()
+    ) {
+      return jsonError(
+        "Vui lòng chọn staff."
+      );
     }
 
-    if (!order_code || !String(order_code).trim()) {
-      return jsonError("Vui lòng nhập mã đơn.");
+    if (
+      !order_code ||
+      !String(order_code).trim()
+    ) {
+      return jsonError(
+        "Vui lòng nhập mã đơn."
+      );
     }
 
-    const parsedAmount = Number(amount ?? 0);
-    const parsedTip = Number(tip ?? 0);
+    const parsedAmount =
+      Number(amount ?? 0);
 
-    if (!Number.isFinite(parsedAmount) || parsedAmount < 0) {
-      return jsonError("Số tiền đơn không hợp lệ.");
+    const parsedTip =
+      Number(tip ?? 0);
+
+    if (
+      !Number.isFinite(parsedAmount) ||
+      parsedAmount < 0
+    ) {
+      return jsonError(
+        "Số tiền đơn không hợp lệ."
+      );
     }
 
-    if (!Number.isFinite(parsedTip) || parsedTip < 0) {
-      return jsonError("Tiền tip không hợp lệ.");
+    if (
+      !Number.isFinite(parsedTip) ||
+      parsedTip < 0
+    ) {
+      return jsonError(
+        "Tiền tip không hợp lệ."
+      );
     }
 
+    // ==================================================
+    // ADMIN CLIENT
     // Service Role chỉ chạy phía server
-    const admin = createAdminClient();
+    // ==================================================
 
-    const { data, error } = await admin
-      .from("orders")
-      .insert({
-        order_date:
-          order_date ||
-          new Date().toISOString().split("T")[0],
+    const admin =
+      createAdminClient();
 
-        order_code: String(order_code).trim(),
+    const { data, error } =
+      await admin
+        .from("orders")
+        .insert({
+          order_date:
+            order_date ||
+            new Date()
+              .toISOString()
+              .split("T")[0],
 
-        staff_name: String(staff_name).trim(),
+          order_code:
+            String(order_code).trim(),
 
-        customer_name:
-          customer_name == null
-            ? ""
-            : String(customer_name).trim(),
+          staff_name:
+            String(staff_name).trim(),
 
-        amount: parsedAmount,
+          customer_name:
+            customer_name == null
+              ? ""
+              : String(
+                  customer_name
+                ).trim(),
 
-        tip: parsedTip,
+          amount:
+            parsedAmount,
 
-        note:
-          note == null
-            ? ""
-            : String(note).trim(),
-      })
-      .select()
-      .single();
+          tip:
+            parsedTip,
+
+          note:
+            note == null
+              ? ""
+              : String(note).trim(),
+        })
+        .select()
+        .single();
 
     if (error) {
-      console.error("POST /api/orders error:", error);
+      console.error(
+        "POST /api/orders error:",
+        error
+      );
 
       return NextResponse.json(
         {
           error: error.message,
           code: error.code,
         },
-        { status: 500 }
+        {
+          status: 500,
+        }
       );
     }
 
-    return NextResponse.json(data, {
-      status: 201,
-    });
+    return NextResponse.json(
+      data,
+      {
+        status: 201,
+      }
+    );
   } catch (error) {
-    console.error("POST /api/orders exception:", error);
+    console.error(
+      "POST /api/orders exception:",
+      error
+    );
 
     return jsonError(
       error instanceof Error
@@ -255,16 +333,25 @@ export async function POST(request: NextRequest) {
 // CHỈ ADMIN
 // ======================================================
 
-export async function PATCH(request: NextRequest) {
+export async function PATCH(
+  request: NextRequest
+) {
   try {
-    const { user, profile } = await getCurrentUser();
+    const { user, profile } =
+      await getCurrentUser();
 
     if (!user) {
-      return jsonError("Bạn chưa đăng nhập.", 401);
+      return jsonError(
+        "Bạn chưa đăng nhập.",
+        401
+      );
     }
 
     if (!profile) {
-      return jsonError("Không tìm thấy thông tin tài khoản.", 403);
+      return jsonError(
+        "Không tìm thấy thông tin tài khoản.",
+        403
+      );
     }
 
     if (profile.role !== "admin") {
@@ -274,7 +361,8 @@ export async function PATCH(request: NextRequest) {
       );
     }
 
-    const body = (await request.json()) as OrderBody;
+    const body =
+      (await request.json()) as OrderBody;
 
     const {
       id,
@@ -288,17 +376,26 @@ export async function PATCH(request: NextRequest) {
     } = body;
 
     if (!id) {
-      return jsonError("Thiếu ID đơn cần sửa.");
+      return jsonError(
+        "Thiếu ID đơn cần sửa."
+      );
     }
 
-    const updateData: Record<string, unknown> = {};
+    const updateData:
+      Record<string, unknown> = {};
 
-    if (order_date !== undefined) {
-      updateData.order_date = order_date;
+    if (
+      order_date !== undefined
+    ) {
+      updateData.order_date =
+        order_date;
     }
 
-    if (order_code !== undefined) {
-      const value = String(order_code).trim();
+    if (
+      order_code !== undefined
+    ) {
+      const value =
+        String(order_code).trim();
 
       if (!value) {
         return jsonError(
@@ -306,11 +403,15 @@ export async function PATCH(request: NextRequest) {
         );
       }
 
-      updateData.order_code = value;
+      updateData.order_code =
+        value;
     }
 
-    if (staff_name !== undefined) {
-      const value = String(staff_name).trim();
+    if (
+      staff_name !== undefined
+    ) {
+      const value =
+        String(staff_name).trim();
 
       if (!value) {
         return jsonError(
@@ -318,21 +419,31 @@ export async function PATCH(request: NextRequest) {
         );
       }
 
-      updateData.staff_name = value;
+      updateData.staff_name =
+        value;
     }
 
-    if (customer_name !== undefined) {
+    if (
+      customer_name !== undefined
+    ) {
       updateData.customer_name =
         customer_name == null
           ? ""
-          : String(customer_name).trim();
+          : String(
+              customer_name
+            ).trim();
     }
 
-    if (amount !== undefined) {
-      const parsedAmount = Number(amount);
+    if (
+      amount !== undefined
+    ) {
+      const parsedAmount =
+        Number(amount);
 
       if (
-        !Number.isFinite(parsedAmount) ||
+        !Number.isFinite(
+          parsedAmount
+        ) ||
         parsedAmount < 0
       ) {
         return jsonError(
@@ -340,14 +451,20 @@ export async function PATCH(request: NextRequest) {
         );
       }
 
-      updateData.amount = parsedAmount;
+      updateData.amount =
+        parsedAmount;
     }
 
-    if (tip !== undefined) {
-      const parsedTip = Number(tip);
+    if (
+      tip !== undefined
+    ) {
+      const parsedTip =
+        Number(tip);
 
       if (
-        !Number.isFinite(parsedTip) ||
+        !Number.isFinite(
+          parsedTip
+        ) ||
         parsedTip < 0
       ) {
         return jsonError(
@@ -355,40 +472,58 @@ export async function PATCH(request: NextRequest) {
         );
       }
 
-      updateData.tip = parsedTip;
+      updateData.tip =
+        parsedTip;
     }
 
-    if (note !== undefined) {
+    if (
+      note !== undefined
+    ) {
       updateData.note =
         note == null
           ? ""
           : String(note).trim();
     }
 
-    if (Object.keys(updateData).length === 0) {
+    if (
+      Object.keys(updateData)
+        .length === 0
+    ) {
       return jsonError(
         "Không có dữ liệu nào để cập nhật."
       );
     }
 
-    const admin = createAdminClient();
+    // ==================================================
+    // ADMIN CLIENT
+    // Bypass RLS khi admin cập nhật
+    // ==================================================
 
-    const { data, error } = await admin
-      .from("orders")
-      .update(updateData)
-      .eq("id", id)
-      .select()
-      .maybeSingle();
+    const admin =
+      createAdminClient();
+
+    const { data, error } =
+      await admin
+        .from("orders")
+        .update(updateData)
+        .eq("id", id)
+        .select()
+        .maybeSingle();
 
     if (error) {
-      console.error("PATCH /api/orders error:", error);
+      console.error(
+        "PATCH /api/orders error:",
+        error
+      );
 
       return NextResponse.json(
         {
           error: error.message,
           code: error.code,
         },
-        { status: 500 }
+        {
+          status: 500,
+        }
       );
     }
 
@@ -399,11 +534,17 @@ export async function PATCH(request: NextRequest) {
       );
     }
 
-    return NextResponse.json(data, {
-      status: 200,
-    });
+    return NextResponse.json(
+      data,
+      {
+        status: 200,
+      }
+    );
   } catch (error) {
-    console.error("PATCH /api/orders exception:", error);
+    console.error(
+      "PATCH /api/orders exception:",
+      error
+    );
 
     return jsonError(
       error instanceof Error
@@ -420,16 +561,25 @@ export async function PATCH(request: NextRequest) {
 // CHỈ ADMIN
 // ======================================================
 
-export async function DELETE(request: NextRequest) {
+export async function DELETE(
+  request: NextRequest
+) {
   try {
-    const { user, profile } = await getCurrentUser();
+    const { user, profile } =
+      await getCurrentUser();
 
     if (!user) {
-      return jsonError("Bạn chưa đăng nhập.", 401);
+      return jsonError(
+        "Bạn chưa đăng nhập.",
+        401
+      );
     }
 
     if (!profile) {
-      return jsonError("Không tìm thấy thông tin tài khoản.", 403);
+      return jsonError(
+        "Không tìm thấy thông tin tài khoản.",
+        403
+      );
     }
 
     if (profile.role !== "admin") {
@@ -439,34 +589,50 @@ export async function DELETE(request: NextRequest) {
       );
     }
 
-    const body = await request.json();
+    const body =
+      await request.json();
 
-    const { id } = body as {
-      id?: string;
-    };
+    const { id } =
+      body as {
+        id?: string;
+      };
 
     if (!id) {
-      return jsonError("Thiếu ID đơn cần xóa.");
+      return jsonError(
+        "Thiếu ID đơn cần xóa."
+      );
     }
 
-    const admin = createAdminClient();
+    // ==================================================
+    // ADMIN CLIENT
+    // Bypass RLS khi admin xóa
+    // ==================================================
 
-    const { data, error } = await admin
-      .from("orders")
-      .delete()
-      .eq("id", id)
-      .select()
-      .maybeSingle();
+    const admin =
+      createAdminClient();
+
+    const { data, error } =
+      await admin
+        .from("orders")
+        .delete()
+        .eq("id", id)
+        .select()
+        .maybeSingle();
 
     if (error) {
-      console.error("DELETE /api/orders error:", error);
+      console.error(
+        "DELETE /api/orders error:",
+        error
+      );
 
       return NextResponse.json(
         {
           error: error.message,
           code: error.code,
         },
-        { status: 500 }
+        {
+          status: 500,
+        }
       );
     }
 

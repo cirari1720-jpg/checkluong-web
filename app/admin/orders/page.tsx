@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 
 type Order = {
-id: string | number;
+  id: number;
   order_date: string;
   order_code: string;
   staff_name: string;
@@ -63,7 +63,7 @@ export default function OrdersPage() {
   const [profileName, setProfileName] = useState("");
 
   // ==============================
-  // FORM THÊM / SỬA ĐƠN
+  // FORM
   // ==============================
 
   const [orderDate, setOrderDate] = useState("");
@@ -77,8 +77,7 @@ export default function OrdersPage() {
   const [submitting, setSubmitting] = useState(false);
 
   // ID đơn đang sửa
- const [editingId, setEditingId] =
-  useState<string | number | null>(null);
+  const [editingId, setEditingId] = useState<number | null>(null);
 
   // ==============================
   // LOAD ORDERS
@@ -98,7 +97,6 @@ export default function OrdersPage() {
         return;
       }
 
-      // Lấy role + tên profile
       const {
         data: profile,
         error: profileError,
@@ -117,7 +115,6 @@ export default function OrdersPage() {
       setRole(profile.role || "");
       setProfileName(profile.name || "");
 
-      // Lấy dữ liệu qua API
       const response = await fetch("/api/orders", {
         method: "GET",
         cache: "no-store",
@@ -220,7 +217,19 @@ export default function OrdersPage() {
     setError("");
     setSuccess("");
 
-    setEditingId(order.id);
+    // Quan trọng:
+    // lưu đúng ID database của đơn
+    const id = Number(order.id);
+
+    if (!Number.isFinite(id)) {
+      setError("ID đơn hàng không hợp lệ.");
+      return;
+    }
+
+    console.log("EDIT ORDER:", order);
+    console.log("EDITING ID:", id);
+
+    setEditingId(id);
 
     setOrderDate(order.order_date || "");
     setOrderCode(order.order_code || "");
@@ -246,38 +255,75 @@ export default function OrdersPage() {
     e.preventDefault();
 
     if (editingId === null) {
+      setError("Không xác định được ID đơn cần cập nhật.");
       return;
     }
-    console.log("EDITING ID:", editingId);
+
+    const id = Number(editingId);
+
+    if (!Number.isFinite(id)) {
+      setError("ID đơn hàng không hợp lệ.");
+      return;
+    }
 
     setError("");
     setSuccess("");
     setSubmitting(true);
 
+    console.log("UPDATE ORDER ID:", id);
+
     try {
+      const payload = {
+        id: id,
+
+        // Gửi thêm order_id để API tương thích
+        // nếu cần kiểm tra/debug.
+        order_id: id,
+
+        order_date: orderDate,
+        order_code: orderCode,
+        staff_name: staffName,
+        customer_name: customerName,
+        amount: Number(amount),
+        tip: Number(tip || 0),
+        note,
+      };
+
+      console.log(
+        "UPDATE ORDER PAYLOAD:",
+        payload
+      );
+
       const response = await fetch("/api/orders", {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({
-          id: editingId,
-          order_id: editingId,
-          order_date: orderDate,
-          order_code: orderCode,
-          staff_name: staffName,
-          customer_name: customerName,
-          amount: Number(amount),
-          tip: Number(tip || 0),
-          note,
-        }),
+        body: JSON.stringify(payload),
       });
 
-      const data = await response.json();
+      const text = await response.text();
+
+      let data: any;
+
+      try {
+        data = JSON.parse(text);
+      } catch {
+        data = {
+          error: text || "API không trả về dữ liệu hợp lệ.",
+        };
+      }
+
+      console.log(
+        "UPDATE ORDER RESPONSE:",
+        response.status,
+        data
+      );
 
       if (!response.ok) {
         throw new Error(
-          data.error || "Không thể cập nhật đơn."
+          data.error ||
+            `Không thể cập nhật đơn. HTTP ${response.status}`
         );
       }
 
@@ -287,6 +333,11 @@ export default function OrdersPage() {
 
       await loadOrders();
     } catch (err) {
+      console.error(
+        "UPDATE ORDER ERROR:",
+        err
+      );
+
       setError(
         err instanceof Error
           ? err.message
@@ -326,13 +377,21 @@ export default function OrdersPage() {
     setSuccess("");
 
     try {
+      const id = Number(order.id);
+
+      if (!Number.isFinite(id)) {
+        throw new Error(
+          "ID đơn hàng không hợp lệ."
+        );
+      }
+
       const response = await fetch("/api/orders", {
         method: "DELETE",
         headers: {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          id: order.id,
+          id,
         }),
       });
 
@@ -346,8 +405,7 @@ export default function OrdersPage() {
 
       setSuccess("Xóa đơn thành công!");
 
-      // Nếu đang sửa chính đơn vừa xóa
-      if (editingId === order.id) {
+      if (editingId === id) {
         resetForm();
       }
 
@@ -362,7 +420,7 @@ export default function OrdersPage() {
   }
 
   // ==============================
-  // ĐĂNG XUẤT
+  // LOGOUT
   // ==============================
 
   async function handleLogout() {
@@ -761,7 +819,8 @@ export default function OrdersPage() {
                       <td
                         style={{
                           ...tdStyle,
-                          whiteSpace: "nowrap",
+                          whiteSpace:
+                            "nowrap",
                         }}
                       >
                         <button

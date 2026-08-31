@@ -6,14 +6,21 @@ import { createAdminClient } from "@/lib/supabase/admin";
 type OrderBody = {
   id?: string | number;
   order_id?: string | number;
+
   order_date?: string;
   order_code?: string;
   staff_name?: string;
   customer_name?: string;
+
   amount?: number | string;
   tip?: number | string;
-  note?: string;
+
+  note?: string | null;
 };
+
+// ======================================================
+// CURRENT USER
+// ======================================================
 
 async function getCurrentUser() {
   const supabase = await createClient();
@@ -60,6 +67,10 @@ async function getCurrentUser() {
   };
 }
 
+// ======================================================
+// JSON ERROR
+// ======================================================
+
 function jsonError(
   message: string,
   status = 400
@@ -76,12 +87,6 @@ function jsonError(
 
 // ======================================================
 // GET
-// ======================================================
-// ADMIN:
-//   lấy toàn bộ đơn
-//
-// STAFF:
-//   chỉ lấy đơn của chính mình
 // ======================================================
 
 export async function GET() {
@@ -102,6 +107,16 @@ export async function GET() {
     if (!profile) {
       return jsonError(
         "Không tìm thấy thông tin tài khoản.",
+        403
+      );
+    }
+
+    if (
+      profile.role !== "admin" &&
+      profile.role !== "staff"
+    ) {
+      return jsonError(
+        "Role tài khoản không hợp lệ.",
         403
       );
     }
@@ -131,17 +146,6 @@ export async function GET() {
       );
     }
 
-    // Chỉ cho phép admin hoặc staff
-    if (
-      profile.role !== "admin" &&
-      profile.role !== "staff"
-    ) {
-      return jsonError(
-        "Role tài khoản không hợp lệ.",
-        403
-      );
-    }
-
     const {
       data,
       error,
@@ -157,6 +161,8 @@ export async function GET() {
         {
           error: error.message,
           code: error.code,
+          details: error.details,
+          hint: error.hint,
         },
         {
           status: 500,
@@ -276,12 +282,6 @@ export async function POST(
       );
     }
 
-    // ==================================================
-    // ADMIN CLIENT
-    // Bypass RLS
-    // Chỉ chạy phía server
-    // ==================================================
-
     const admin =
       createAdminClient();
 
@@ -369,9 +369,12 @@ export async function POST(
 // ======================================================
 // CHỈ ADMIN
 //
-// Hàm dùng chung cho:
-// PATCH /api/orders
+// Hỗ trợ cả:
+//
 // PUT   /api/orders
+// PATCH /api/orders
+//
+// Frontend hiện tại sử dụng PUT.
 // ======================================================
 
 async function updateOrder(
@@ -407,42 +410,78 @@ async function updateOrder(
     const body =
       (await request.json()) as OrderBody;
 
-    const {
-  id,
-  order_id,
-  order_date,
-  order_code,
-  staff_name,
-  customer_name,
-  amount,
-  tip,
-  note,
-} = body;
+    console.log(
+      "UPDATE /api/orders BODY:",
+      body
+    );
 
-const updateId = id ?? order_id;
+    // ==================================================
+    // NHẬN ID
+    // ==================================================
+    //
+    // Ưu tiên id.
+    // Nếu không có id thì lấy order_id.
+    //
 
-  if (
-  updateId === undefined ||
-  updateId === null ||
-  String(updateId).trim() === ""
-) {
-  return jsonError(
-    "Thiếu ID đơn cần cập nhật."
-  );
-}
+    const rawId =
+      body.id ??
+      body.order_id;
+
+    if (
+      rawId === undefined ||
+      rawId === null ||
+      String(rawId).trim() === ""
+    ) {
+      console.error(
+        "UPDATE /api/orders: MISSING ID",
+        body
+      );
+
+      return jsonError(
+        "Thiếu ID đơn cần cập nhật."
+      );
+    }
+
+    const id =
+      Number(rawId);
+
+    if (
+      !Number.isInteger(id) ||
+      id <= 0
+    ) {
+      console.error(
+        "UPDATE /api/orders: INVALID ID",
+        rawId
+      );
+
+      return jsonError(
+        "ID đơn cần cập nhật không hợp lệ."
+      );
+    }
+
+    console.log(
+      "UPDATE /api/orders ID:",
+      id
+    );
+
+    // ==================================================
+    // DATA UPDATE
+    // ==================================================
 
     const updateData:
       Record<string, unknown> = {};
 
-    // ==================================================
+    // --------------------------------------------------
     // NGÀY
-    // ==================================================
+    // --------------------------------------------------
 
     if (
-      order_date !== undefined
+      order_dateIsProvided(body)
     ) {
       const value =
-        String(order_date).trim();
+        String(
+          body.order_date
+        ).trim();
 
       if (!value) {
         return jsonError(
@@ -454,15 +493,17 @@ const updateId = id ?? order_id;
         value;
     }
 
-    // ==================================================
+    // --------------------------------------------------
     // MÃ ĐƠN
-    // ==================================================
+    // --------------------------------------------------
 
     if (
-      order_code !== undefined
+      body.order_code !== undefined
     ) {
       const value =
-        String(order_code).trim();
+        String(
+          body.order_code
+        ).trim();
 
       if (!value) {
         return jsonError(
@@ -474,15 +515,17 @@ const updateId = id ?? order_id;
         value;
     }
 
-    // ==================================================
+    // --------------------------------------------------
     // STAFF
-    // ==================================================
+    // --------------------------------------------------
 
     if (
-      staff_name !== undefined
+      body.staff_name !== undefined
     ) {
       const value =
-        String(staff_name).trim();
+        String(
+          body.staff_name
+        ).trim();
 
       if (!value) {
         return jsonError(
@@ -494,30 +537,30 @@ const updateId = id ?? order_id;
         value;
     }
 
-    // ==================================================
+    // --------------------------------------------------
     // KHÁCH HÀNG
-    // ==================================================
+    // --------------------------------------------------
 
     if (
-      customer_name !== undefined
+      body.customer_name !== undefined
     ) {
       updateData.customer_name =
-        customer_name == null
+        body.customer_name == null
           ? ""
           : String(
-              customer_name
+              body.customer_name
             ).trim();
     }
 
-    // ==================================================
+    // --------------------------------------------------
     // SỐ TIỀN
-    // ==================================================
+    // --------------------------------------------------
 
     if (
-      amount !== undefined
+      body.amount !== undefined
     ) {
       const parsedAmount =
-        Number(amount);
+        Number(body.amount);
 
       if (
         !Number.isFinite(
@@ -534,15 +577,15 @@ const updateId = id ?? order_id;
         parsedAmount;
     }
 
-    // ==================================================
+    // --------------------------------------------------
     // TIP
-    // ==================================================
+    // --------------------------------------------------
 
     if (
-      tip !== undefined
+      body.tip !== undefined
     ) {
       const parsedTip =
-        Number(tip);
+        Number(body.tip);
 
       if (
         !Number.isFinite(
@@ -559,17 +602,19 @@ const updateId = id ?? order_id;
         parsedTip;
     }
 
-    // ==================================================
+    // --------------------------------------------------
     // GHI CHÚ
-    // ==================================================
+    // --------------------------------------------------
 
     if (
-      note !== undefined
+      body.note !== undefined
     ) {
       updateData.note =
-        note == null
+        body.note == null
           ? ""
-          : String(note).trim();
+          : String(
+              body.note
+            ).trim();
     }
 
     if (
@@ -581,9 +626,14 @@ const updateId = id ?? order_id;
       );
     }
 
+    console.log(
+      "UPDATE /api/orders DATA:",
+      updateData
+    );
+
     // ==================================================
     // ADMIN CLIENT
-    // Bypass RLS
+    // BYPASS RLS
     // ==================================================
 
     const admin =
@@ -595,13 +645,13 @@ const updateId = id ?? order_id;
     } = await admin
       .from("orders")
       .update(updateData)
-     .eq("id", updateId)
+      .eq("id", id)
       .select()
       .maybeSingle();
 
     if (error) {
       console.error(
-        "UPDATE /api/orders error:",
+        "UPDATE /api/orders SUPABASE ERROR:",
         error
       );
 
@@ -619,11 +669,21 @@ const updateId = id ?? order_id;
     }
 
     if (!data) {
+      console.error(
+        "UPDATE /api/orders: ORDER NOT FOUND",
+        id
+      );
+
       return jsonError(
-        "Không tìm thấy đơn cần cập nhật.",
+        `Không tìm thấy đơn có ID ${id} cần cập nhật.`,
         404
       );
     }
+
+    console.log(
+      "UPDATE /api/orders SUCCESS:",
+      data
+    );
 
     return NextResponse.json(
       data,
@@ -633,7 +693,7 @@ const updateId = id ?? order_id;
     );
   } catch (error) {
     console.error(
-      "UPDATE /api/orders exception:",
+      "UPDATE /api/orders EXCEPTION:",
       error
     );
 
@@ -649,8 +709,6 @@ const updateId = id ?? order_id;
 // ======================================================
 // PATCH
 // ======================================================
-// CHỈ ADMIN
-// ======================================================
 
 export async function PATCH(
   request: NextRequest
@@ -660,15 +718,6 @@ export async function PATCH(
 
 // ======================================================
 // PUT
-// ======================================================
-// CHỈ ADMIN
-//
-// Quan trọng:
-// Web hiện tại của bạn đang gửi:
-//
-// PUT /api/orders
-//
-// nên phải có PUT.
 // ======================================================
 
 export async function PUT(
@@ -714,28 +763,33 @@ export async function DELETE(
     }
 
     const body =
-      await request.json();
+      (await request.json()) as OrderBody;
 
-    const {
-      id,
-    } = body as {
-      id?: string | number;
-    };
+    const rawId =
+      body.id ??
+      body.order_id;
 
     if (
-      id === undefined ||
-      id === null ||
-      String(id).trim() === ""
+      rawId === undefined ||
+      rawId === null ||
+      String(rawId).trim() === ""
     ) {
       return jsonError(
         "Thiếu ID đơn cần xóa."
       );
     }
 
-    // ==================================================
-    // ADMIN CLIENT
-    // Bypass RLS
-    // ==================================================
+    const id =
+      Number(rawId);
+
+    if (
+      !Number.isInteger(id) ||
+      id <= 0
+    ) {
+      return jsonError(
+        "ID đơn cần xóa không hợp lệ."
+      );
+    }
 
     const admin =
       createAdminClient();
@@ -771,7 +825,7 @@ export async function DELETE(
 
     if (!data) {
       return jsonError(
-        "Không tìm thấy đơn cần xóa.",
+        `Không tìm thấy đơn có ID ${id} cần xóa.`,
         404
       );
     }
@@ -798,4 +852,14 @@ export async function DELETE(
       500
     );
   }
+}
+
+// ======================================================
+// HELPER
+// ======================================================
+
+function order_dateIsProvided(
+  body: OrderBody
+) {
+  return body.order_date !== undefined;
 }

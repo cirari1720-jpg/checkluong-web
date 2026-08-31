@@ -220,6 +220,7 @@ export default function OrdersPage() {
     setSuccess("");
 
     setEditingId(order.id);
+
     setOrderDate(order.order_date || "");
     setOrderCode(order.order_code || "");
     setStaffName(order.staff_name || "");
@@ -246,6 +247,7 @@ export default function OrdersPage() {
     if (editingId === null) {
       return;
     }
+    console.log("EDITING ID:", editingId);
 
     setError("");
     setSuccess("");

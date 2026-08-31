@@ -4,7 +4,7 @@ import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 
 type OrderBody = {
-  id?: string;
+  id?: string | number;
   order_date?: string;
   order_code?: string;
   staff_name?: string;
@@ -30,14 +30,20 @@ async function getCurrentUser() {
     };
   }
 
-  const { data: profile, error: profileError } = await supabase
+  const {
+    data: profile,
+    error: profileError,
+  } = await supabase
     .from("profiles")
     .select("id, name, role")
     .eq("id", user.id)
     .single();
 
   if (profileError || !profile) {
-    console.error("GET CURRENT USER PROFILE ERROR:", profileError);
+    console.error(
+      "GET CURRENT USER PROFILE ERROR:",
+      profileError
+    );
 
     return {
       user,
@@ -53,12 +59,17 @@ async function getCurrentUser() {
   };
 }
 
-function jsonError(message: string, status = 400) {
+function jsonError(
+  message: string,
+  status = 400
+) {
   return NextResponse.json(
     {
       error: message,
     },
-    { status }
+    {
+      status,
+    }
   );
 }
 
@@ -74,10 +85,17 @@ function jsonError(message: string, status = 400) {
 
 export async function GET() {
   try {
-    const { user, profile, supabase } = await getCurrentUser();
+    const {
+      user,
+      profile,
+      supabase,
+    } = await getCurrentUser();
 
     if (!user) {
-      return jsonError("Bạn chưa đăng nhập.", 401);
+      return jsonError(
+        "Bạn chưa đăng nhập.",
+        401
+      );
     }
 
     if (!profile) {
@@ -90,10 +108,14 @@ export async function GET() {
     let query = supabase
       .from("orders")
       .select("*")
-      .order("order_date", { ascending: false })
-      .order("created_at", { ascending: false });
+      .order("order_date", {
+        ascending: false,
+      })
+      .order("created_at", {
+        ascending: false,
+      });
 
-    // STAFF chỉ được xem đơn của chính mình
+    // STAFF chỉ xem đơn của chính mình
     if (profile.role === "staff") {
       if (!profile.name) {
         return jsonError(
@@ -102,10 +124,13 @@ export async function GET() {
         );
       }
 
-      query = query.eq("staff_name", profile.name);
+      query = query.eq(
+        "staff_name",
+        profile.name
+      );
     }
 
-    // ADMIN được xem tất cả
+    // Chỉ cho phép admin hoặc staff
     if (
       profile.role !== "admin" &&
       profile.role !== "staff"
@@ -116,7 +141,10 @@ export async function GET() {
       );
     }
 
-    const { data, error } = await query;
+    const {
+      data,
+      error,
+    } = await query;
 
     if (error) {
       console.error(
@@ -127,6 +155,7 @@ export async function GET() {
       return NextResponse.json(
         {
           error: error.message,
+          code: error.code,
         },
         {
           status: 500,
@@ -165,8 +194,10 @@ export async function POST(
   request: NextRequest
 ) {
   try {
-    const { user, profile } =
-      await getCurrentUser();
+    const {
+      user,
+      profile,
+    } = await getCurrentUser();
 
     if (!user) {
       return jsonError(
@@ -246,48 +277,51 @@ export async function POST(
 
     // ==================================================
     // ADMIN CLIENT
-    // Service Role chỉ chạy phía server
+    // Bypass RLS
+    // Chỉ chạy phía server
     // ==================================================
 
     const admin =
       createAdminClient();
 
-    const { data, error } =
-      await admin
-        .from("orders")
-        .insert({
-          order_date:
-            order_date ||
-            new Date()
-              .toISOString()
-              .split("T")[0],
+    const {
+      data,
+      error,
+    } = await admin
+      .from("orders")
+      .insert({
+        order_date:
+          order_date ||
+          new Date()
+            .toISOString()
+            .split("T")[0],
 
-          order_code:
-            String(order_code).trim(),
+        order_code:
+          String(order_code).trim(),
 
-          staff_name:
-            String(staff_name).trim(),
+        staff_name:
+          String(staff_name).trim(),
 
-          customer_name:
-            customer_name == null
-              ? ""
-              : String(
-                  customer_name
-                ).trim(),
+        customer_name:
+          customer_name == null
+            ? ""
+            : String(
+                customer_name
+              ).trim(),
 
-          amount:
-            parsedAmount,
+        amount:
+          parsedAmount,
 
-          tip:
-            parsedTip,
+        tip:
+          parsedTip,
 
-          note:
-            note == null
-              ? ""
-              : String(note).trim(),
-        })
-        .select()
-        .single();
+        note:
+          note == null
+            ? ""
+            : String(note).trim(),
+      })
+      .select()
+      .single();
 
     if (error) {
       console.error(
@@ -299,6 +333,8 @@ export async function POST(
         {
           error: error.message,
           code: error.code,
+          details: error.details,
+          hint: error.hint,
         },
         {
           status: 500,
@@ -328,17 +364,23 @@ export async function POST(
 }
 
 // ======================================================
-// PATCH
+// UPDATE ORDER
 // ======================================================
 // CHỈ ADMIN
+//
+// Hàm dùng chung cho:
+// PATCH /api/orders
+// PUT   /api/orders
 // ======================================================
 
-export async function PATCH(
+async function updateOrder(
   request: NextRequest
 ) {
   try {
-    const { user, profile } =
-      await getCurrentUser();
+    const {
+      user,
+      profile,
+    } = await getCurrentUser();
 
     if (!user) {
       return jsonError(
@@ -356,7 +398,7 @@ export async function PATCH(
 
     if (profile.role !== "admin") {
       return jsonError(
-        "Bạn không có quyền sửa đơn.",
+        "Bạn không có quyền cập nhật đơn.",
         403
       );
     }
@@ -375,21 +417,42 @@ export async function PATCH(
       note,
     } = body;
 
-    if (!id) {
+    if (
+      id === undefined ||
+      id === null ||
+      String(id).trim() === ""
+    ) {
       return jsonError(
-        "Thiếu ID đơn cần sửa."
+        "Thiếu ID đơn cần cập nhật."
       );
     }
 
     const updateData:
       Record<string, unknown> = {};
 
+    // ==================================================
+    // NGÀY
+    // ==================================================
+
     if (
       order_date !== undefined
     ) {
+      const value =
+        String(order_date).trim();
+
+      if (!value) {
+        return jsonError(
+          "Ngày đơn không được để trống."
+        );
+      }
+
       updateData.order_date =
-        order_date;
+        value;
     }
+
+    // ==================================================
+    // MÃ ĐƠN
+    // ==================================================
 
     if (
       order_code !== undefined
@@ -407,6 +470,10 @@ export async function PATCH(
         value;
     }
 
+    // ==================================================
+    // STAFF
+    // ==================================================
+
     if (
       staff_name !== undefined
     ) {
@@ -423,6 +490,10 @@ export async function PATCH(
         value;
     }
 
+    // ==================================================
+    // KHÁCH HÀNG
+    // ==================================================
+
     if (
       customer_name !== undefined
     ) {
@@ -433,6 +504,10 @@ export async function PATCH(
               customer_name
             ).trim();
     }
+
+    // ==================================================
+    // SỐ TIỀN
+    // ==================================================
 
     if (
       amount !== undefined
@@ -455,6 +530,10 @@ export async function PATCH(
         parsedAmount;
     }
 
+    // ==================================================
+    // TIP
+    // ==================================================
+
     if (
       tip !== undefined
     ) {
@@ -476,6 +555,10 @@ export async function PATCH(
         parsedTip;
     }
 
+    // ==================================================
+    // GHI CHÚ
+    // ==================================================
+
     if (
       note !== undefined
     ) {
@@ -496,23 +579,25 @@ export async function PATCH(
 
     // ==================================================
     // ADMIN CLIENT
-    // Bypass RLS khi admin cập nhật
+    // Bypass RLS
     // ==================================================
 
     const admin =
       createAdminClient();
 
-    const { data, error } =
-      await admin
-        .from("orders")
-        .update(updateData)
-        .eq("id", id)
-        .select()
-        .maybeSingle();
+    const {
+      data,
+      error,
+    } = await admin
+      .from("orders")
+      .update(updateData)
+      .eq("id", id)
+      .select()
+      .maybeSingle();
 
     if (error) {
       console.error(
-        "PATCH /api/orders error:",
+        "UPDATE /api/orders error:",
         error
       );
 
@@ -520,6 +605,8 @@ export async function PATCH(
         {
           error: error.message,
           code: error.code,
+          details: error.details,
+          hint: error.hint,
         },
         {
           status: 500,
@@ -529,7 +616,7 @@ export async function PATCH(
 
     if (!data) {
       return jsonError(
-        "Không tìm thấy đơn cần sửa.",
+        "Không tìm thấy đơn cần cập nhật.",
         404
       );
     }
@@ -542,17 +629,48 @@ export async function PATCH(
     );
   } catch (error) {
     console.error(
-      "PATCH /api/orders exception:",
+      "UPDATE /api/orders exception:",
       error
     );
 
     return jsonError(
       error instanceof Error
         ? error.message
-        : "Không thể sửa đơn.",
+        : "Không thể cập nhật đơn.",
       500
     );
   }
+}
+
+// ======================================================
+// PATCH
+// ======================================================
+// CHỈ ADMIN
+// ======================================================
+
+export async function PATCH(
+  request: NextRequest
+) {
+  return updateOrder(request);
+}
+
+// ======================================================
+// PUT
+// ======================================================
+// CHỈ ADMIN
+//
+// Quan trọng:
+// Web hiện tại của bạn đang gửi:
+//
+// PUT /api/orders
+//
+// nên phải có PUT.
+// ======================================================
+
+export async function PUT(
+  request: NextRequest
+) {
+  return updateOrder(request);
 }
 
 // ======================================================
@@ -565,8 +683,10 @@ export async function DELETE(
   request: NextRequest
 ) {
   try {
-    const { user, profile } =
-      await getCurrentUser();
+    const {
+      user,
+      profile,
+    } = await getCurrentUser();
 
     if (!user) {
       return jsonError(
@@ -592,12 +712,17 @@ export async function DELETE(
     const body =
       await request.json();
 
-    const { id } =
-      body as {
-        id?: string;
-      };
+    const {
+      id,
+    } = body as {
+      id?: string | number;
+    };
 
-    if (!id) {
+    if (
+      id === undefined ||
+      id === null ||
+      String(id).trim() === ""
+    ) {
       return jsonError(
         "Thiếu ID đơn cần xóa."
       );
@@ -605,19 +730,21 @@ export async function DELETE(
 
     // ==================================================
     // ADMIN CLIENT
-    // Bypass RLS khi admin xóa
+    // Bypass RLS
     // ==================================================
 
     const admin =
       createAdminClient();
 
-    const { data, error } =
-      await admin
-        .from("orders")
-        .delete()
-        .eq("id", id)
-        .select()
-        .maybeSingle();
+    const {
+      data,
+      error,
+    } = await admin
+      .from("orders")
+      .delete()
+      .eq("id", id)
+      .select()
+      .maybeSingle();
 
     if (error) {
       console.error(
@@ -629,6 +756,8 @@ export async function DELETE(
         {
           error: error.message,
           code: error.code,
+          details: error.details,
+          hint: error.hint,
         },
         {
           status: 500,
@@ -643,10 +772,15 @@ export async function DELETE(
       );
     }
 
-    return NextResponse.json({
-      success: true,
-      data,
-    });
+    return NextResponse.json(
+      {
+        success: true,
+        data,
+      },
+      {
+        status: 200,
+      }
+    );
   } catch (error) {
     console.error(
       "DELETE /api/orders exception:",

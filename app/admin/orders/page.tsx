@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 
 type Order = {
-  id: number;
+id: string | number;
   order_date: string;
   order_code: string;
   staff_name: string;
@@ -77,7 +77,8 @@ export default function OrdersPage() {
   const [submitting, setSubmitting] = useState(false);
 
   // ID đơn đang sửa
-  const [editingId, setEditingId] = useState<number | null>(null);
+ const [editingId, setEditingId] =
+  useState<string | number | null>(null);
 
   // ==============================
   // LOAD ORDERS
@@ -255,7 +256,7 @@ export default function OrdersPage() {
 
     try {
       const response = await fetch("/api/orders", {
-        method: "PATCH",
+        method: "PUT",
         headers: {
           "Content-Type": "application/json",
         },

@@ -5,6 +5,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 
 type OrderBody = {
   id?: string | number;
+  order_id?: string | number;
   order_date?: string;
   order_code?: string;
   staff_name?: string;
@@ -407,25 +408,28 @@ async function updateOrder(
       (await request.json()) as OrderBody;
 
     const {
-      id,
-      order_date,
-      order_code,
-      staff_name,
-      customer_name,
-      amount,
-      tip,
-      note,
-    } = body;
+  id,
+  order_id,
+  order_date,
+  order_code,
+  staff_name,
+  customer_name,
+  amount,
+  tip,
+  note,
+} = body;
 
-    if (
-      id === undefined ||
-      id === null ||
-      String(id).trim() === ""
-    ) {
-      return jsonError(
-        "Thiếu ID đơn cần cập nhật."
-      );
-    }
+const updateId = id ?? order_id;
+
+  if (
+  updateId === undefined ||
+  updateId === null ||
+  String(updateId).trim() === ""
+) {
+  return jsonError(
+    "Thiếu ID đơn cần cập nhật."
+  );
+}
 
     const updateData:
       Record<string, unknown> = {};
@@ -591,7 +595,7 @@ async function updateOrder(
     } = await admin
       .from("orders")
       .update(updateData)
-      .eq("id", id)
+     .eq("id", updateId)
       .select()
       .maybeSingle();
 

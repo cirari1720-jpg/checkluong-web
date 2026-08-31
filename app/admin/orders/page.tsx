@@ -259,6 +259,7 @@ export default function OrdersPage() {
         },
         body: JSON.stringify({
           id: editingId,
+          order_id: editingId,
           order_date: orderDate,
           order_code: orderCode,
           staff_name: staffName,

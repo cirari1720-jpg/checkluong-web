@@ -96,7 +96,8 @@ type KpiData = Record<KpiKey, number>;
 ========================================================= */
 
 type Order = {
-  id: string;
+  id: string;          // ID thật trong database
+  order_code: string;  // mã đơn hiển thị
   amount: number;
 };
 
@@ -505,38 +506,41 @@ function OrderEditor({
   onChange: (orders: Order[]) => void;
 }) {
   function addOrder() {
-    const newOrder: Order = {
-      id: `Đơn ${orders.length + 1}`,
-      amount: 0,
+  const newOrder: Order = {
+    id: `new-${Date.now()}`,
+    order_code: `Đơn ${orders.length + 1}`,
+    amount: 0,
+  };
+
+  onChange([
+    ...orders,
+    newOrder,
+  ]);
+}
+
+ function updateOrder(
+  index: number,
+  field: keyof Order,
+  value: string
+) {
+  const next = [...orders];
+
+  if (field === "amount") {
+    next[index] = {
+      ...next[index],
+      amount: Number(value) || 0,
     };
-
-    onChange([
-      ...orders,
-      newOrder,
-    ]);
   }
 
-  function updateOrder(
-    index: number,
-    field: keyof Order,
-    value: string
-  ) {
-    const next = [...orders];
-
-    if (field === "amount") {
-      next[index] = {
-        ...next[index],
-        amount: Number(value) || 0,
-      };
-    } else {
-      next[index] = {
-        ...next[index],
-        id: value,
-      };
-    }
-
-    onChange(next);
+  if (field === "order_code") {
+    next[index] = {
+      ...next[index],
+      order_code: value,
+    };
   }
+
+  onChange(next);
+}
 
   function deleteOrder(index: number) {
     if (
@@ -587,16 +591,16 @@ function OrderEditor({
                 </div>
 
                 <input
-                  value={order.id}
-                  onChange={(e) =>
-                    updateOrder(
-                      index,
-                      "id",
-                      e.target.value
-                    )
-                  }
-                  placeholder="Tên / mã đơn"
-                />
+  value={order.order_code}
+  onChange={(e) =>
+    updateOrder(
+      index,
+      "order_code",
+      e.target.value
+    )
+  }
+  placeholder="Tên / mã đơn"
+/>
 
                 <input
                   type="number"
@@ -1232,190 +1236,95 @@ export default function Home() {
       const kpiData = kpiResponse.ok
         ? await kpiResponse.json()
         : [];
+        const penaltiesData = penaltiesResponse.ok
+  ? await penaltiesResponse.json()
+  : [];
 
-      const penaltiesData =
-        penaltiesResponse.ok
-          ? await penaltiesResponse.json()
-          : [];
+      const nextDatabase = createDatabase();
 
-      const nextDatabase =
-        createDatabase();
+/* ==================================================
+   LOAD ORDERS VÀO DATABASE
+   id       = ID thật trong bảng orders
+   order_code = mã đơn hiển thị
+================================================== */
 
-      /* =================================================
-         ORDERS
-      ================================================= */
+if (Array.isArray(orders)) {
+  for (const order of orders) {
+    const staffName = String(
+      order.staff_name ?? ""
+    ).trim();
 
-      if (Array.isArray(orders)) {
-        orders.forEach((order: any) => {
-          const staffName = String(
-            order.staff_name || ""
-          ).trim();
+    if (!staffName) continue;
 
-          if (!staffName) {
-            return;
-          }
+    const personName = STAFF.find(
+      (name) =>
+        name.trim().toLowerCase() ===
+        staffName.toLowerCase()
+    );
 
-          if (
-            !STAFF.includes(
-              staffName as any
-            )
-          ) {
-            return;
-          }
-
-          const person =
-            nextDatabase[staffName];
-
-          if (!person) {
-            return;
-          }
-
-          person.staffOrders.push({
-            id: String(
-              order.order_code ||
-              order.id
-            ),
-            amount: Number(
-              order.amount || 0
-            ),
-          });
-        });
-      }
-
-      /* =================================================
-         KPI
-      ================================================= */
-
-      if (Array.isArray(kpiData)) {
-        kpiData.forEach((kpi: any) => {
-          const staffName = String(
-            kpi.staff_name || ""
-          ).trim();
-
-          if (!staffName) {
-            return;
-          }
-
-          if (
-            !STAFF.includes(
-              staffName as any
-            )
-          ) {
-            return;
-          }
-
-          const person =
-            nextDatabase[staffName];
-
-          if (!person) {
-            return;
-          }
-
-          person.kpi = {
-            page: Number(
-              kpi.page ?? 0
-            ),
-
-            photo: Number(
-              kpi.photo ?? 0
-            ),
-
-            editPhoto: Number(
-              kpi.edit_photo ?? 0
-            ),
-
-            video: Number(
-              kpi.video ?? 0
-            ),
-
-            editVideo: Number(
-              kpi.edit_video ?? 0
-            ),
-
-            harem: Number(
-              kpi.harem ?? 0
-            ),
-
-            hostDan: Number(
-              kpi.host_dan ?? 0
-            ),
-
-            hostTreo: Number(
-              kpi.host_treo ?? 0
-            ),
-          };
-        });
-      }
-
-      /* =================================================
-         PENALTIES
-      ================================================= */
-
-      if (
-        Array.isArray(
-          penaltiesData
-        )
-      ) {
-        penaltiesData.forEach(
-          (penalty: any) => {
-            const staffName = String(
-              penalty.staff_name || ""
-            ).trim();
-
-            if (!staffName) {
-              return;
-            }
-
-            if (
-              !STAFF.includes(
-                staffName as any
-              )
-            ) {
-              return;
-            }
-
-            const person =
-              nextDatabase[
-                staffName
-              ];
-
-            if (!person) {
-              return;
-            }
-
-            person.penalties.push({
-              id: String(
-                penalty.id
-              ),
-
-              error: String(
-                penalty.error || ""
-              ),
-
-              amount: Number(
-                penalty.amount || 0
-              ),
-
-              form: String(
-                penalty.form || ""
-              ),
-            });
-          }
-        );
-      }
-
-      setDatabase(
-        nextDatabase
+    if (!personName) {
+      console.warn(
+        "Không tìm thấy staff:",
+        staffName
       );
+      continue;
+    }
 
-      console.log(
-        "===== SUPABASE LOAD ====="
-      );
+    const normalizedOrder: Order = {
+      id: String(order.id),
+      order_code: String(
+        order.order_code ?? ""
+      ),
+      amount: Number(
+        order.amount ?? 0
+      ),
+    };
 
-      console.log(
-        "ORDERS:",
-        orders
+    /*
+     * order_type = "page"
+     * → đơn Trực Page
+     *
+     * Còn lại
+     * → đơn Staff
+     */
+    if (
+      String(order.order_type ?? "").toLowerCase() ===
+      "page"
+    ) {
+      nextDatabase[personName].pageOrders.push(
+        normalizedOrder
       );
+    } else {
+      nextDatabase[personName].staffOrders.push(
+        normalizedOrder
+      );
+    }
+  }
+}
+
+console.log(
+  "ORDERS:",
+  orders
+);
+
+console.log(
+  "KPI:",
+  kpiData
+);
+
+console.log(
+  "PENALTIES:",
+  penaltiesData
+);
+
+console.log(
+  "DATABASE:",
+  nextDatabase
+);
+
+setDatabase(nextDatabase);
+
+setLoaded(true);
 
       console.log(
         "KPI:",
@@ -1703,33 +1612,27 @@ async function updatePerson(
         Number(oldOrder.amount || 0) !==
         Number(order.amount || 0)
       ) {
-        const response = await fetch(
-          "/api/orders",
-          {
-            method: "PUT",
-            headers: {
-              "Content-Type":
-                "application/json",
-            },
-            body: JSON.stringify({
-              order_code:
-                order.id,
+        const response = await fetch("/api/orders", {
+  method: "PUT",
+  headers: {
+    "Content-Type": "application/json",
+  },
+  body: JSON.stringify({
+    id: Number(order.id),
+    order_id: Number(order.id),
 
-              staff_name:
-                staffName,
+    order_code: order.id,
+    staff_name: staffName,
+    amount: Number(order.amount || 0),
+  }),
+});
 
-              amount:
-                Number(order.amount || 0),
-            }),
-          }
-        );
-
-        if (!response.ok) {
-          throw new Error(
-            "Không thể cập nhật đơn: " +
-              (await response.text())
-          );
-        }
+if (!response.ok) {
+  throw new Error(
+    "Không thể cập nhật đơn: " +
+      (await response.text())
+  );
+}
       }
     }
 
@@ -2594,7 +2497,8 @@ const totalKpiValue =
             </div>
           )}
 
-          {/* =================================================
+          {
+          /* =================================================
               ORDERS
           ================================================= */}
 

@@ -1632,12 +1632,12 @@ if (!response.ok) {
                 "application/json",
             },
             body: JSON.stringify({
-              order_code:
-                oldOrder.id,
+  id: Number(oldOrder.id),
+  order_id: Number(oldOrder.id),
 
-              staff_name:
-                staffName,
-            }),
+  staff_name:
+    staffName,
+}),
           }
         );
 
@@ -1790,15 +1790,15 @@ continue;
               "Content-Type":
                 "application/json",
             },
-            body: JSON.stringify({
-              order_code:
-                oldOrder.id,
+        body: JSON.stringify({
+  id: Number(oldOrder.id),
+  order_id: Number(oldOrder.id),
 
-              staff_name:
-                staffName,
+  staff_name:
+    staffName,
 
-              order_type: "page",
-            }),
+  order_type: "page",
+}),
           }
         );
 

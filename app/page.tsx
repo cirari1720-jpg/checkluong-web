@@ -135,10 +135,6 @@ type Account =
       name: string;
     }
   | {
-      role: "page";
-      name: string;
-    }
-  | {
       role: "admin";
       name: "Admin";
     };
@@ -243,10 +239,10 @@ const LOGIN_ACCOUNTS: Record<string, Account> = {
     name: "ED",
   },
 
-  MO201: {
-    role: "page",
-    name: "Mỏ",
-  },
+MO201: {
+  role: "staff",
+  name: "Mỏ",
+},
 
   HAN724: {
     role: "staff",
@@ -288,10 +284,10 @@ const LOGIN_ACCOUNTS: Record<string, Account> = {
     name: "Sena",
   },
 
-  TIA196: {
-    role: "page",
-    name: "Tia",
-  },
+TIA196: {
+  role: "staff",
+  name: "Tia",
+},
 
   TEO1611: {
     role: "staff",
@@ -1367,89 +1363,66 @@ setLoaded(true);
      LOGIN
   ======================================================= */
 
-  async function login() {
-  const code =
-    loginCode
-      .trim()
-      .toUpperCase();
+   async function login() {
+    const code = loginCode.trim().toUpperCase();
 
-  const account =
-    LOGIN_ACCOUNTS[code];
+    const account = LOGIN_ACCOUNTS[code];
 
-  if (!account) {
-    alert("Mã truy cập không đúng.");
-    return;
-  }
-
-  /*
-   * Mỗi mã truy cập cũ sẽ tương ứng
-   * với một tài khoản Supabase Auth.
-   *
-   * TẠM THỜI chỉ cấu hình Q và Admin.
-   */
-  const SUPABASE_LOGIN: Record<
-    string,
-    {
-      email: string;
-      password: string;
+    if (!account) {
+      alert("Mã truy cập không đúng.");
+      return;
     }
-  > = {
-    Q1811: {
-      email: "Q@gmail.com",
-      password: "SoulHunter2026",
-    },
 
-    ZEFROSTY: {
-      email: "cirari1720@gmail.com",
-      password: "FoxxWxSx070503",
-    },
-  };
+    try {
+      // Admin vẫn đăng nhập bằng Supabase Auth
+      if (account.role === "admin") {
+        const { error } = await supabase.auth.signInWithPassword({
+          email: "cirari1720@gmail.com",
+          password: "FoxxWxSx070503",
+        });
 
-  const supabaseLogin =
-    SUPABASE_LOGIN[code];
+        if (error) {
+          console.error("Admin login error:", error);
+          alert("Không thể đăng nhập Admin: " + error.message);
+          return;
+        }
+      } else {
+        // Staff đăng nhập bằng mã riêng
+        const response = await fetch("/api/staff-login", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            code,
+          }),
+        });
 
-  if (!supabaseLogin) {
-    alert(
-      "Tài khoản này chưa được kết nối với Supabase."
-    );
-    return;
+        const result = await response.json();
+
+        if (!response.ok) {
+          console.error("Staff login error:", result);
+          alert(result.error || "Không thể đăng nhập.");
+          return;
+        }
+
+        console.log("Staff login:", result);
+      }
+
+      setCurrentUser(account);
+      setLoginCode("");
+      setActiveTab("overview");
+
+      if (account.role === "admin") {
+        setSelectedPerson("Q");
+      } else {
+        setSelectedPerson(account.name);
+      }
+    } catch (error) {
+      console.error("Login error:", error);
+      alert("Có lỗi xảy ra khi đăng nhập.");
+    }
   }
-
-  const { error } =
-    await supabase.auth.signInWithPassword({
-      email: supabaseLogin.email,
-      password: supabaseLogin.password,
-    });
-
-  if (error) {
-    console.error(
-      "Supabase login error:",
-      error
-    );
-
-    alert(
-      "Không thể đăng nhập Supabase: " +
-        error.message
-    );
-
-    return;
-  }
-
-  /*
-   * Supabase đã tạo session.
-   * Giữ lại hệ thống currentUser hiện tại
-   * để giao diện cũ vẫn hoạt động.
-   */
-  setCurrentUser(account);
-  setLoginCode("");
-  setActiveTab("overview");
-
-  if (account.role === "admin") {
-    setSelectedPerson("Q");
-  } else {
-    setSelectedPerson(account.name);
-  }
-}
   /* =======================================================
      LOGOUT
   ======================================================= */

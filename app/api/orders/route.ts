@@ -407,13 +407,38 @@ async function updateOrder(
       );
     }
 
-    const body =
-      (await request.json()) as OrderBody;
+   const rawBody = await request.text();
 
-    console.log(
-      "UPDATE /api/orders BODY:",
-      body
-    );
+console.log(
+  "UPDATE /api/orders RAW BODY:",
+  rawBody
+);
+
+if (!rawBody) {
+  return jsonError(
+    "Request không có body."
+  );
+}
+
+let body: OrderBody;
+
+try {
+  body = JSON.parse(rawBody) as OrderBody;
+} catch {
+  console.error(
+    "UPDATE /api/orders INVALID JSON:",
+    rawBody
+  );
+
+  return jsonError(
+    "Body JSON không hợp lệ."
+  );
+}
+
+console.log(
+  "UPDATE /api/orders PARSED BODY:",
+  body
+);
 
     // ==================================================
     // NHẬN ID

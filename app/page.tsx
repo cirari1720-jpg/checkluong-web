@@ -1570,17 +1570,23 @@ async function updatePerson(
           }
         );
 
-        if (!response.ok) {
-          throw new Error(
-            "Không thể thêm đơn: " +
-              (await response.text())
-          );
-        }
+if (!response.ok) {
+  throw new Error(
+    "Không thể thêm đơn: " +
+      (await response.text())
+  );
+}
 
-        continue;
-      }
+const createdOrder = await response.json();
 
-      /* Đơn cũ nhưng bị thay đổi */
+if (createdOrder?.id != null) {
+  order.id = String(createdOrder.id);
+}
+
+continue;
+}
+
+/* Đơn cũ nhưng bị thay đổi */
       if (
         Number(oldOrder.amount || 0) !==
         Number(order.amount || 0)
@@ -1712,14 +1718,20 @@ if (!response.ok) {
           }
         );
 
-        if (!response.ok) {
-          throw new Error(
-            "Không thể thêm đơn trực: " +
-              (await response.text())
-          );
-        }
+if (!response.ok) {
+  throw new Error(
+    "Không thể thêm đơn trực: " +
+      (await response.text())
+  );
+}
 
-        continue;
+const createdOrder = await response.json();
+
+if (createdOrder?.id != null) {
+  order.id = String(createdOrder.id);
+}
+
+continue;
       }
 
       /* Đơn trực bị sửa */
@@ -1736,17 +1748,20 @@ if (!response.ok) {
                 "application/json",
             },
             body: JSON.stringify({
-              order_code:
-                order.id,
+  id: Number(order.id),
+  order_id: Number(order.id),
 
-              staff_name:
-                staffName,
+  order_code:
+    order.order_code,
 
-              amount:
-                Number(order.amount || 0),
+  staff_name:
+    staffName,
 
-              order_type: "page",
-            }),
+  amount:
+    Number(order.amount || 0),
+
+  order_type: "page",
+}),
           }
         );
 

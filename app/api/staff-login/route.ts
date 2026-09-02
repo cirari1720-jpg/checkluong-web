@@ -74,6 +74,7 @@ export async function POST(request: NextRequest) {
      * Mã đã được xác thực bởi staff_login()
      * trước khi tới bước này.
      */
+        const authPassword = `${code}-StaffAuth2026!`;
 
     let authUserId: string | null = null;
 
@@ -113,7 +114,7 @@ export async function POST(request: NextRequest) {
         await admin.auth.admin.updateUserById(
           authUserId,
           {
-            password: code,
+            password: authPassword,
             email_confirm: true,
           }
         );
@@ -137,7 +138,7 @@ export async function POST(request: NextRequest) {
       const { data: createdUser, error: createError } =
         await admin.auth.admin.createUser({
           email,
-          password: code,
+          password: authPassword,
           email_confirm: true,
           user_metadata: {
             staff_name: staffName,
@@ -244,7 +245,7 @@ export async function POST(request: NextRequest) {
     const { error: signInError } =
       await supabase.auth.signInWithPassword({
         email,
-        password: code,
+        password: authPassword,
       });
 
     if (signInError) {

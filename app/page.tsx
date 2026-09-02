@@ -1302,6 +1302,44 @@ console.log(
   "ORDERS:",
   orders
 );
+/* ==================================================
+   LOAD KPI VÀO DATABASE
+================================================== */
+
+if (Array.isArray(kpiData)) {
+  for (const row of kpiData) {
+    const staffName = String(
+      row.staff_name ?? ""
+    ).trim();
+
+    if (!staffName) continue;
+
+    const personName = STAFF.find(
+      (name) =>
+        name.trim().toLowerCase() ===
+        staffName.toLowerCase()
+    );
+
+    if (!personName) {
+      console.warn(
+        "Không tìm thấy staff KPI:",
+        staffName
+      );
+      continue;
+    }
+
+    nextDatabase[personName].kpi = {
+      page: Number(row.page ?? 0),
+      photo: Number(row.photo ?? 0),
+      editPhoto: Number(row.edit_photo ?? 0),
+      video: Number(row.video ?? 0),
+      editVideo: Number(row.edit_video ?? 0),
+      harem: Number(row.harem ?? 0),
+      hostDan: Number(row.host_dan ?? 0),
+      hostTreo: Number(row.host_treo ?? 0),
+    };
+  }
+}
 
 console.log(
   "KPI:",

@@ -1635,8 +1635,8 @@ continue;
     "Content-Type": "application/json",
   },
   body: JSON.stringify({
-    id: Number(order.id),
-    order_id: Number(order.id),
+    id: String(order.id),
+order_id: String(order.id),
 
     order_code: order.id,
     staff_name: staffName,
@@ -1786,9 +1786,8 @@ continue;
                 "application/json",
             },
             body: JSON.stringify({
-  id: Number(order.id),
-  order_id: Number(order.id),
-
+id: String(order.id),
+order_id: String(order.id),
   order_code:
     order.order_code,
 

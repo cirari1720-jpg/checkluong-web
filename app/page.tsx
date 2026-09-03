@@ -1305,6 +1305,45 @@ export default function Home() {
 
       const nextDatabase = createDatabase();
 
+      /* ==========================================
+   PENALTIES
+========================================== */
+
+if (Array.isArray(penaltiesData)) {
+  for (const personName of STAFF) {
+    const staffPenalties =
+      penaltiesData
+        .filter(
+          (penalty: any) =>
+            String(
+              penalty.staff_name ?? ""
+            )
+              .trim()
+              .toLowerCase() ===
+            personName
+              .trim()
+              .toLowerCase()
+        )
+        .map((penalty: any) => ({
+          id: String(
+            penalty.id ?? ""
+          ),
+          error: String(
+            penalty.error ?? ""
+          ),
+          amount: Number(
+            penalty.amount ?? 0
+          ),
+          form: String(
+            penalty.form ?? ""
+          ),
+        }));
+
+    nextDatabase[personName].penalties =
+      staffPenalties;
+  }
+}
+
 /* ==================================================
    LOAD ORDERS VÀO DATABASE
    id       = ID thật trong bảng orders

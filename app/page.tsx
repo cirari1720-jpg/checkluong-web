@@ -1457,33 +1457,43 @@ setLoaded(true);
     }
   }
 
-  loadData();
+loadData();
 
-  // Tự cập nhật dữ liệu mới từ Supabase mỗi 5 giây
-  const refreshInterval = setInterval(() => {
-    loadData();
-  }, 5000);
-
-  // Khi Staff quay lại tab cũng tải dữ liệu mới ngay
-  const handleVisibilityChange = () => {
-    if (document.visibilityState === "visible") {
+const refreshInterval = isAdmin
+  ? null
+  : setInterval(() => {
       loadData();
-    }
-  };
+    }, 5000);
 
+const handleVisibilityChange = () => {
+  if (
+    !isAdmin &&
+    document.visibilityState ===
+      "visible"
+  ) {
+    loadData();
+  }
+};
+
+if (!isAdmin) {
   document.addEventListener(
     "visibilitychange",
     handleVisibilityChange
   );
+}
 
-  return () => {
+return () => {
+  if (refreshInterval) {
     clearInterval(refreshInterval);
+  }
 
+  if (!isAdmin) {
     document.removeEventListener(
       "visibilitychange",
       handleVisibilityChange
     );
-  };
+  }
+};
 }, [currentUser]);
   /* =======================================================
      SAVE

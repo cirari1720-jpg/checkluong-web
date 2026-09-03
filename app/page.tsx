@@ -1785,20 +1785,41 @@ continue;
         Number(oldOrder.amount || 0) !==
         Number(order.amount || 0)
       ) {
-        const response = await fetch("/api/orders", {
-  method: "PUT",
-  headers: {
-    "Content-Type": "application/json",
-  },
-  body: JSON.stringify({
-    id: String(order.id),
-order_id: String(order.id),
+       const numericOrderId = Number(order.id);
 
-    order_code: order.id,
-    staff_name: staffName,
-    amount: Number(order.amount || 0),
-  }),
-});
+if (
+  !Number.isInteger(numericOrderId) ||
+  numericOrderId <= 0
+) {
+  throw new Error(
+    `ID đơn trực không hợp lệ: ${order.id}`
+  );
+}
+
+const response = await fetch(
+  "/api/orders",
+  {
+    method: "PUT",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      id: numericOrderId,
+      order_id: numericOrderId,
+      order_code: order.order_code,
+      staff_name: staffName,
+      amount: Number(order.amount || 0),
+      order_type: "page",
+    }),
+  }
+);
+
+if (!response.ok) {
+  throw new Error(
+    "Không thể cập nhật đơn: " +
+      (await response.text())
+  );
+}
 
 if (!response.ok) {
   throw new Error(

@@ -1413,6 +1413,60 @@ console.log(
   kpiData
 );
 
+/* ==================================================
+   LOAD PENALTIES VÀO DATABASE
+================================================== */
+
+if (Array.isArray(penaltiesData)) {
+  for (const row of penaltiesData) {
+    const staffName = String(
+      row.staff_name ?? ""
+    ).trim();
+
+    if (!staffName) continue;
+
+    const personName = STAFF.find(
+      (name) =>
+        name.trim().toLowerCase() ===
+        staffName.toLowerCase()
+    );
+
+    if (!personName) {
+      console.warn(
+        "Không tìm thấy staff phạt:",
+        staffName
+      );
+      continue;
+    }
+
+    nextDatabase[personName].penalties =
+      penaltiesData
+        .filter(
+          (penalty) =>
+            String(
+              penalty.staff_name ?? ""
+            )
+              .trim()
+              .toLowerCase() ===
+            personName
+              .trim()
+              .toLowerCase()
+        )
+        .map((penalty) => ({
+          id: String(penalty.id),
+          error: String(
+            penalty.error ?? ""
+          ),
+          amount: Number(
+            penalty.amount ?? 0
+          ),
+          form: String(
+            penalty.form ?? ""
+          ),
+        }));
+  }
+}
+
 console.log(
   "PENALTIES:",
   penaltiesData

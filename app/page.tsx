@@ -1920,62 +1920,191 @@ order_id: String(order.id),
       }
     }
 
-    /* ==========================================
-       5. PENALTIES
-    ========================================== */
+/* ==========================================
+   5. PENALTIES
+========================================== */
 
-    const oldPenalties =
-      previousPerson.penalties ?? [];
+const oldPenalties =
+  previousPerson.penalties ?? [];
 
-    const newPenalties =
-      updatedPerson.penalties ?? [];
+const newPenalties =
+  updatedPerson.penalties ?? [];
 
-    const penaltiesChanged =
-      JSON.stringify(oldPenalties) !==
-      JSON.stringify(newPenalties);
+const oldPenaltyMap = new Map(
+  oldPenalties.map((penalty) => [
+    String(penalty.id),
+    penalty,
+  ])
+);
 
-    if (penaltiesChanged) {
-      const response = await fetch(
-        "/api/staff-penalties",
-        {
-          method: "POST",
-          headers: {
-            "Content-Type":
-              "application/json",
-          },
-          body: JSON.stringify({
-            staff_name:
-              staffName,
+const newPenaltyMap = new Map(
+  newPenalties.map((penalty) => [
+    String(penalty.id),
+    penalty,
+  ])
+);
 
-            penalties:
-              newPenalties.map(
-                (penalty) => ({
-                  id:
-                    penalty.id,
+/* ==========================================
+   5A. THÊM / SỬA PHẠT
+========================================== */
 
-                  error:
-                    penalty.error,
+for (const penalty of newPenalties) {
+  const penaltyId = String(penalty.id);
+  const oldPenalty =
+    oldPenaltyMap.get(penaltyId);
 
-                  amount:
-                    Number(
-                      penalty.amount || 0
-                    ),
+  /* ------------------------------------------
+     PHẠT MỚI
+  ------------------------------------------ */
 
-                  form:
-                    penalty.form,
-                })
-              ),
-          }),
-        }
+  if (!oldPenalty) {
+    if (!penalty.error.trim()) {
+      throw new Error(
+        "Vui lòng nhập nội dung lỗi phạt."
       );
-
-      if (!response.ok) {
-        throw new Error(
-          "Lưu phạt thất bại: " +
-            (await response.text())
-        );
-      }
     }
+
+    const response = await fetch(
+      "/api/staff-penalties",
+      {
+        method: "POST",
+        headers: {
+          "Content-Type":
+            "application/json",
+        },
+        body: JSON.stringify({
+          staff_name: staffName,
+          error: penalty.error,
+          amount: Number(
+            penalty.amount || 0
+          ),
+          form: penalty.form,
+        }),
+      }
+    );
+
+    if (!response.ok) {
+      throw new Error(
+        "Không thể thêm phạt: " +
+          (await response.text())
+      );
+    }
+
+    const createdPenalty =
+      await response.json();
+
+    /*
+     * Đổi ID tạm trên giao diện thành
+     * ID thật trong Supabase
+     */
+    if (createdPenalty?.id != null) {
+      penalty.id = String(
+        createdPenalty.id
+      );
+    }
+
+    continue;
+  }
+
+  /* ------------------------------------------
+     PHẠT CŨ NHƯNG BỊ SỬA
+  ------------------------------------------ */
+
+  const penaltyChanged =
+    oldPenalty.error !== penalty.error ||
+    Number(oldPenalty.amount || 0) !==
+      Number(penalty.amount || 0) ||
+    oldPenalty.form !== penalty.form;
+
+  if (penaltyChanged) {
+    if (!penalty.error.trim()) {
+      throw new Error(
+        "Vui lòng nhập nội dung lỗi phạt."
+      );
+    }
+
+    const numericId =
+      Number(penalty.id);
+
+    if (
+      !Number.isInteger(numericId) ||
+      numericId <= 0
+    ) {
+      throw new Error(
+        "ID khoản phạt không hợp lệ."
+      );
+    }
+
+    const response = await fetch(
+      "/api/staff-penalties",
+      {
+        method: "PATCH",
+        headers: {
+          "Content-Type":
+            "application/json",
+        },
+        body: JSON.stringify({
+          id: numericId,
+          error: penalty.error,
+          amount: Number(
+            penalty.amount || 0
+          ),
+          form: penalty.form,
+        }),
+      }
+    );
+
+    if (!response.ok) {
+      throw new Error(
+        "Không thể cập nhật phạt: " +
+          (await response.text())
+      );
+    }
+  }
+}
+
+/* ==========================================
+   5B. XÓA PHẠT
+========================================== */
+
+for (const oldPenalty of oldPenalties) {
+  const oldId = String(oldPenalty.id);
+
+  if (!newPenaltyMap.has(oldId)) {
+    const numericId =
+      Number(oldPenalty.id);
+
+    if (
+      !Number.isInteger(numericId) ||
+      numericId <= 0
+    ) {
+      throw new Error(
+        "ID khoản phạt cần xóa không hợp lệ."
+      );
+    }
+
+    const response = await fetch(
+      "/api/staff-penalties",
+      {
+        method: "DELETE",
+        headers: {
+          "Content-Type":
+            "application/json",
+        },
+        body: JSON.stringify({
+          id: numericId,
+        }),
+      }
+    );
+
+    if (!response.ok) {
+      throw new Error(
+        "Không thể xóa phạt: " +
+          (await response.text())
+      );
+    }
+  }
+  }
 
     /* ==========================================
        6. HOÀN TẤT

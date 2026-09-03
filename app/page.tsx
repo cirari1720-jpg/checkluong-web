@@ -1939,13 +1939,8 @@ for (const penalty of newPenalties) {
     penalty.id ?? ""
   );
 
-  const isTemporary =
-    penaltyId.startsWith("new-") ||
-    penaltyId.includes("-") &&
-      !/^\d+$/.test(penaltyId);
-
   /*
-   * Tìm khoản phạt cũ bằng ID
+   * Tìm khoản phạt cũ trong database
    */
   const oldPenalty =
     oldPenalties.find(
@@ -1959,8 +1954,8 @@ for (const penalty of newPenalties) {
 
   if (!oldPenalty) {
     /*
-     * Nếu là dòng phạt mới nhưng chưa nhập lỗi
-     * thì bỏ qua, không gửi API.
+     * Dòng mới nhưng chưa nhập nội dung
+     * thì không gửi API.
      */
     if (!penalty.error.trim()) {
       continue;
@@ -1997,8 +1992,7 @@ for (const penalty of newPenalties) {
     }
 
     /*
-     * API trả ID thật từ Supabase.
-     * Không dùng ID tạm nữa.
+     * Lấy ID thật từ Supabase
      */
     try {
       const createdPenalty =
@@ -2010,7 +2004,7 @@ for (const penalty of newPenalties) {
         );
       }
     } catch {
-      // Không cần xử lý thêm nếu API không trả JSON
+      // API đã trả thành công
     }
 
     continue;
@@ -2023,9 +2017,6 @@ for (const penalty of newPenalties) {
   const numericId =
     Number(oldPenalty.id);
 
-  /*
-   * ID lấy từ database bắt buộc phải là số.
-   */
   if (
     !Number.isInteger(numericId) ||
     numericId <= 0
@@ -2080,6 +2071,66 @@ for (const penalty of newPenalties) {
   }
 }
 
+/* ==========================================
+   5B. XÓA PHẠT
+========================================== */
+
+for (const oldPenalty of oldPenalties) {
+  const oldId =
+    String(oldPenalty.id ?? "");
+
+  const stillExists =
+    newPenalties.some(
+      (penalty) =>
+        String(penalty.id) === oldId
+    );
+
+  if (stillExists) {
+    continue;
+  }
+
+  /*
+   * Chỉ xóa ID thật trong database.
+   * ID tạm trên giao diện không được DELETE.
+   */
+  if (!/^\d+$/.test(oldId)) {
+    continue;
+  }
+
+  const numericId =
+    Number(oldId);
+
+  if (
+    !Number.isInteger(numericId) ||
+    numericId <= 0
+  ) {
+    continue;
+  }
+
+  const response = await fetch(
+    "/api/staff-penalties",
+    {
+      method: "DELETE",
+      headers: {
+        "Content-Type":
+          "application/json",
+      },
+      body: JSON.stringify({
+        id: numericId,
+      }),
+    }
+  );
+
+  const responseText =
+    await response.text();
+
+  if (!response.ok) {
+    throw new Error(
+      "Không thể xóa phạt: " +
+        responseText
+    );
+  }
+}
 /* ==========================================
    5B. XÓA PHẠT
 ========================================== */

@@ -165,50 +165,160 @@ export async function POST(request: NextRequest) {
     }
 
     // 5. Đảm bảo profiles có đúng user ID
-    const {
-      data: profile,
-      error: profileError,
-    } = await admin
-      .from("profiles")
-      .select("id, name, role")
-      .eq("id", authUserId)
-      .maybeSingle();
+const {
+  data: profile,
+  error: profileError,
+} = await admin
+  .from("profiles")
+  .select("id, name, role")
+  .eq("id", authUserId)
+  .maybeSingle();
 
-    if (profileError) {
-      console.error(
-        "PROFILE CHECK ERROR:",
-        profileError
-      );
+if (profileError) {
+  console.error(
+    "PROFILE CHECK ERROR:",
+    profileError
+  );
 
-      return NextResponse.json(
-        { error: "Không thể kiểm tra profile staff." },
-        { status: 500 }
-      );
+  return NextResponse.json(
+    {
+      error:
+        "Không thể kiểm tra profile staff.",
+    },
+    {
+      status: 500,
     }
+  );
+}
 
-    if (!profile) {
-      const { error: profileInsertError } =
-        await admin.from("profiles").insert({
+/*
+ * Nếu profile đã tồn tại theo Auth User ID
+ * thì đồng bộ lại tên + role.
+ */
+if (profile) {
+  const { error: profileUpdateError } =
+    await admin
+      .from("profiles")
+      .update({
+        name: staffName,
+        role: result.role,
+      })
+      .eq("id", authUserId);
+
+  if (profileUpdateError) {
+    console.error(
+      "PROFILE UPDATE ERROR:",
+      profileUpdateError
+    );
+
+    return NextResponse.json(
+      {
+        error:
+          "Không thể cập nhật profile cho staff.",
+      },
+      {
+        status: 500,
+      }
+    );
+  }
+} else {
+  /*
+   * Không có profile theo ID.
+   *
+   * Kiểm tra tiếp theo tên staff.
+   * Trường hợp này xử lý các tài khoản cũ
+   * như Tia đã có profile nhưng ID Auth cũ.
+   */
+  const {
+    data: oldProfile,
+    error: oldProfileError,
+  } = await admin
+    .from("profiles")
+    .select("id, name, role")
+    .eq("name", staffName)
+    .maybeSingle();
+
+  if (oldProfileError) {
+    console.error(
+      "OLD PROFILE CHECK ERROR:",
+      oldProfileError
+    );
+
+    return NextResponse.json(
+      {
+        error:
+          "Không thể kiểm tra profile staff cũ.",
+      },
+      {
+        status: 500,
+      }
+    );
+  }
+
+  if (oldProfile) {
+    /*
+     * Đã có profile cùng tên nhưng ID cũ.
+     * Chuyển profile sang Auth User hiện tại.
+     */
+    const { error: oldProfileUpdateError } =
+      await admin
+        .from("profiles")
+        .update({
           id: authUserId,
           name: staffName,
           role: result.role,
-        });
+        })
+        .eq("id", oldProfile.id);
 
-      if (profileInsertError) {
-        console.error(
-          "PROFILE INSERT ERROR:",
-          profileInsertError
-        );
+    if (oldProfileUpdateError) {
+      console.error(
+        "OLD PROFILE UPDATE ERROR:",
+        oldProfileUpdateError
+      );
 
-        return NextResponse.json(
-          {
-            error:
-              "Không thể tạo profile cho staff.",
-          },
-          { status: 500 }
-        );
-      }
+      return NextResponse.json(
+        {
+          error:
+            "Không thể đồng bộ profile staff.",
+        },
+        {
+          status: 500,
+        }
+      );
     }
+  } else {
+    /*
+     * Hoàn toàn chưa có profile.
+     * Tạo mới.
+     */
+    const {
+      error: profileInsertError,
+    } = await admin
+      .from("profiles")
+      .insert({
+        id: authUserId,
+        name: staffName,
+        role: result.role,
+      });
+
+    if (profileInsertError) {
+      console.error(
+        "PROFILE INSERT ERROR:",
+        profileInsertError
+      );
+
+      return NextResponse.json(
+        {
+          error:
+            "Không thể tạo profile cho staff.",
+        },
+        {
+          status: 500,
+        }
+      );
+    }
+  }
+}
 
     // 6. Tạo Supabase Auth session
     const cookieStore = await cookies();

@@ -1180,7 +1180,9 @@ export default function Home() {
      LOAD
   ======================================================= */
 
-  useEffect(() => {
+ useEffect(() => {
+  if (!currentUser) return;
+
   async function loadData() {
     try {
       const [
@@ -1390,8 +1392,8 @@ setLoaded(true);
     }
   }
 
-  loadData();
-}, []);
+loadData();
+}, [currentUser]);
 
   /* =======================================================
      SAVE

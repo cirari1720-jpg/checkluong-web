@@ -859,73 +859,11 @@ function ReadonlyKpi({
    PENALTY EDITOR
 ========================================================= */
 
-function PenaltyEditor({
+function ReadonlyPenalty({
   penalties,
-  onChange,
 }: {
   penalties: Penalty[];
-  onChange: (
-    penalties: Penalty[]
-  ) => void;
 }) {
-  function createId() {
-    return `${Date.now()}-${Math.random()
-      .toString(36)
-      .slice(2)}`;
-  }
-
-  function addPenalty() {
-    onChange([
-      ...penalties,
-      {
-        id: createId(),
-        error: "",
-        amount: 0,
-        form: "",
-      },
-    ]);
-  }
-
-  function updatePenalty(
-    index: number,
-    field: keyof Penalty,
-    value: string
-  ) {
-    const next = [...penalties];
-
-    if (field === "amount") {
-      next[index] = {
-        ...next[index],
-        amount: Number(value) || 0,
-      };
-    } else {
-      next[index] = {
-        ...next[index],
-        [field]: value,
-      };
-    }
-
-    onChange(next);
-  }
-
-  function deletePenalty(
-    index: number
-  ) {
-    if (
-      !window.confirm(
-        "Xóa khoản phạt này?"
-      )
-    ) {
-      return;
-    }
-
-    onChange(
-      penalties.filter(
-        (_, i) => i !== index
-      )
-    );
-  }
-
   const penaltyTotal =
     penalties.reduce(
       (sum, penalty) =>
@@ -940,17 +878,9 @@ function PenaltyEditor({
         <div>
           <h2>Phạt</h2>
           <p>
-            Admin cập nhật lỗi, mức phạt
-            và hình thức phạt.
+            Thông tin các khoản phạt.
           </p>
         </div>
-
-        <button
-          className="primary-btn"
-          onClick={addPenalty}
-        >
-          + Thêm phạt
-        </button>
       </div>
 
       {penalties.length === 0 ? (
@@ -972,34 +902,21 @@ function PenaltyEditor({
                 <div>
                   <label>Lỗi phạt</label>
 
-                  <input
-                    value={penalty.error}
-                    onChange={(e) =>
-                      updatePenalty(
-                        index,
-                        "error",
-                        e.target.value
-                      )
-                    }
-                    placeholder="Ví dụ: Đi trễ"
-                  />
+                  <div className="readonly-field">
+                    {penalty.error || "—"}
+                  </div>
                 </div>
 
                 <div>
                   <label>Mức phạt</label>
 
-                  <input
-                    type="number"
-                    min="0"
-                    value={penalty.amount}
-                    onChange={(e) =>
-                      updatePenalty(
-                        index,
-                        "amount",
-                        e.target.value
+                  <div className="readonly-field">
+                    {money(
+                      Number(
+                        penalty.amount || 0
                       )
-                    }
-                  />
+                    )}
+                  </div>
                 </div>
 
                 <div>
@@ -1007,27 +924,10 @@ function PenaltyEditor({
                     Hình thức phạt
                   </label>
 
-                  <input
-                    value={penalty.form}
-                    onChange={(e) =>
-                      updatePenalty(
-                        index,
-                        "form",
-                        e.target.value
-                      )
-                    }
-                    placeholder="Ví dụ: Trừ lương"
-                  />
+                  <div className="readonly-field">
+                    {penalty.form || "—"}
+                  </div>
                 </div>
-
-                <button
-                  className="danger-btn"
-                  onClick={() =>
-                    deletePenalty(index)
-                  }
-                >
-                  Xóa
-                </button>
               </div>
             )
           )}
@@ -1048,18 +948,113 @@ function PenaltyEditor({
     </section>
   );
 }
-
-/* =========================================================
-   READONLY PENALTY
-========================================================= */
-
-function ReadonlyPenalty({
+function PenaltyEditor({
   penalties,
+  onChange,
 }: {
   penalties: Penalty[];
+  onChange: (
+    penalties: Penalty[]
+  ) => void;
 }) {
+  const [draftPenalties, setDraftPenalties] =
+    useState<Penalty[]>(penalties);
+
+  useEffect(() => {
+    setDraftPenalties(penalties);
+  }, [penalties]);
+
+  function createId() {
+    return `${Date.now()}-${Math.random()
+      .toString(36)
+      .slice(2)}`;
+  }
+
+  function addPenalty() {
+    const newPenalty: Penalty = {
+      id: createId(),
+      error: "",
+      amount: 0,
+      form: "",
+    };
+
+    const next = [
+      ...draftPenalties,
+      newPenalty,
+    ];
+
+    setDraftPenalties(next);
+
+    /*
+     * Chỉ cập nhật giao diện ngay.
+     * Không cần API lưu vì khoản phạt
+     * chưa có nội dung lỗi.
+     */
+    onChange(next);
+  }
+
+  function updatePenaltyLocal(
+    index: number,
+    field: keyof Penalty,
+    value: string
+  ) {
+    const next = [...draftPenalties];
+
+    if (field === "amount") {
+      next[index] = {
+        ...next[index],
+        amount: Number(value) || 0,
+      };
+    } else {
+      next[index] = {
+        ...next[index],
+        [field]: value,
+      };
+    }
+
+    setDraftPenalties(next);
+  }
+
+  function savePenalty() {
+    /*
+     * Chỉ gửi dữ liệu lên parent khi
+     * người dùng đã nhập xong và rời ô.
+     */
+    onChange(
+      draftPenalties.map((penalty) => ({
+        ...penalty,
+        error:
+          penalty.error?.trim() ?? "",
+        form:
+          penalty.form?.trim() ?? "",
+        amount:
+          Number(penalty.amount || 0),
+      }))
+    );
+  }
+
+  function deletePenalty(
+    index: number
+  ) {
+    if (
+      !window.confirm(
+        "Xóa khoản phạt này?"
+      )
+    ) {
+      return;
+    }
+
+    const next =
+      draftPenalties.filter(
+        (_, i) => i !== index
+      );
+
+    setDraftPenalties(next);
+    onChange(next);
+  }
+
   const penaltyTotal =
-    penalties.reduce(
+    draftPenalties.reduce(
       (sum, penalty) =>
         sum +
         Number(penalty.amount || 0),
@@ -1071,45 +1066,105 @@ function ReadonlyPenalty({
       <div className="section-title-row">
         <div>
           <h2>Phạt</h2>
+
           <p>
-            Thông tin phạt của bạn.
+            Admin cập nhật lỗi, mức phạt
+            và hình thức phạt.
           </p>
         </div>
 
-        <span className="readonly">
-          🔒 CHỈ XEM
-        </span>
+        <button
+          type="button"
+          className="primary-btn"
+          onClick={addPenalty}
+        >
+          + Thêm phạt
+        </button>
       </div>
 
-      {penalties.length === 0 ? (
+      {draftPenalties.length === 0 ? (
         <div className="empty">
-          Không có khoản phạt.
+          Chưa có khoản phạt.
         </div>
       ) : (
-        <div className="penalty-readonly-list">
-          {penalties.map(
+        <div className="penalties">
+          {draftPenalties.map(
             (penalty, index) => (
               <div
-                className="penalty-readonly"
+                className="penalty"
                 key={penalty.id}
               >
-                <div>
-                  <b>
-                    {index + 1}.{" "}
-                    {penalty.error ||
-                      "Không có mô tả"}
-                  </b>
-
-                  <small>
-                    Hình thức:{" "}
-                    {penalty.form ||
-                      "Chưa nhập"}
-                  </small>
+                <div className="penalty-number">
+                  {index + 1}
                 </div>
 
-                <strong>
-                  {money(penalty.amount)}
-                </strong>
+                <div>
+                  <label>
+                    Lỗi phạt
+                  </label>
+
+                  <input
+                    value={penalty.error}
+                    onChange={(e) =>
+                      updatePenaltyLocal(
+                        index,
+                        "error",
+                        e.target.value
+                      )
+                    }
+                    onBlur={savePenalty}
+                    placeholder="Ví dụ: Đi trễ"
+                  />
+                </div>
+
+                <div>
+                  <label>
+                    Mức phạt
+                  </label>
+
+                  <input
+                    type="number"
+                    min="0"
+                    value={penalty.amount}
+                    onChange={(e) =>
+                      updatePenaltyLocal(
+                        index,
+                        "amount",
+                        e.target.value
+                      )
+                    }
+                    onBlur={savePenalty}
+                  />
+                </div>
+
+                <div>
+                  <label>
+                    Hình thức phạt
+                  </label>
+
+                  <input
+                    value={penalty.form}
+                    onChange={(e) =>
+                      updatePenaltyLocal(
+                        index,
+                        "form",
+                        e.target.value
+                      )
+                    }
+                    onBlur={savePenalty}
+                    placeholder="Ví dụ: Trừ lương"
+                  />
+                </div>
+
+                <button
+                  type="button"
+                  className="danger-btn"
+                  onClick={() =>
+                    deletePenalty(index)
+                  }
+                >
+                  Xóa
+                </button>
               </div>
             )
           )}
@@ -1117,9 +1172,19 @@ function ReadonlyPenalty({
       )}
 
       <div className="total-bar">
-        <span>Tổng phạt</span>
+        <span>
+          Số lỗi:{" "}
+          <b>
+            {draftPenalties.length}
+          </b>
+        </span>
 
-        <b>{money(penaltyTotal)}</b>
+        <span>
+          Tổng phạt:{" "}
+          <b>
+            {money(penaltyTotal)}
+          </b>
+        </span>
       </div>
     </section>
   );

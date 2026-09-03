@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createServerClient } from "@supabase/ssr";
-import { createClient as createSupabaseClient } from "@supabase/supabase-js";
 import { cookies } from "next/headers";
 import { createAdminClient } from "@/lib/supabase/admin";
 
@@ -22,10 +21,12 @@ export async function POST(request: NextRequest) {
     const admin = createAdminClient();
 
     // 1. Kiểm tra mã trong staff_access
-    const { data: loginData, error: loginError } =
-      await admin.rpc("staff_login", {
-        p_code: code,
-      });
+    const {
+      data: loginData,
+      error: loginError,
+    } = await admin.rpc("staff_login", {
+      p_code: code,
+    });
 
     if (loginError) {
       console.error(
@@ -54,9 +55,7 @@ export async function POST(request: NextRequest) {
       result.staff_name
     ).trim();
 
-    // 2. Tạo email nội bộ ổn định cho staff.
-    // Email này chỉ dùng cho Supabase Auth,
-    // không hiển thị cho staff.
+    // 2. Tạo email nội bộ ổn định cho staff
     const email =
       `staff_${staffName
         .normalize("NFD")
@@ -66,19 +65,14 @@ export async function POST(request: NextRequest) {
         .replace(/[^a-zA-Z0-9]/g, "")
         .toLowerCase()}@staff.local`;
 
-    /*
-     * Dùng chính mã staff làm password Auth.
-     * Staff không cần biết email này.
-     *
-     * Quan trọng:
-     * Mã đã được xác thực bởi staff_login()
-     * trước khi tới bước này.
-     */
-        const authPassword = `${code}-StaffAuth2026!`;
+    // Password nội bộ cho Supabase Auth
+    const authPassword =
+      `${code}-StaffAuth2026!`;
 
     let authUserId: string | null = null;
+    let authLoginEmail = email;
 
-    // 3. Tìm Auth user hiện có
+    // 3. Lấy danh sách Auth users
     const {
       data: usersData,
       error: usersError,
@@ -94,28 +88,98 @@ export async function POST(request: NextRequest) {
       );
 
       return NextResponse.json(
-        { error: "Không thể kiểm tra tài khoản đăng nhập." },
+        {
+          error:
+            "Không thể kiểm tra tài khoản đăng nhập.",
+          detail: usersError.message,
+        },
         { status: 500 }
       );
     }
 
-    const existingUser =
-      usersData.users.find(
-        (user) =>
-          user.email?.toLowerCase() ===
-          email.toLowerCase()
+    /*
+     * ƯU TIÊN:
+     *
+     * Nếu staff đã có profile thì dùng chính Auth User
+     * đang liên kết với profile đó.
+     *
+     * Điều này xử lý các tài khoản cũ như Tia:
+     *
+     * profiles.id
+     *     =
+     * auth.users.id
+     */
+    const {
+      data: linkedProfile,
+      error: linkedProfileError,
+    } = await admin
+      .from("profiles")
+      .select("id, name, role")
+      .eq("name", staffName)
+      .maybeSingle();
+
+    if (linkedProfileError) {
+      console.error(
+        "LINKED PROFILE CHECK ERROR:",
+        linkedProfileError
       );
 
+      return NextResponse.json(
+        {
+          error:
+            "Không thể kiểm tra profile staff.",
+          detail:
+            linkedProfileError.message,
+        },
+        { status: 500 }
+      );
+    }
+
+    let existingUser =
+      linkedProfile
+        ? usersData.users.find(
+            (user) =>
+              user.id === linkedProfile.id
+          )
+        : undefined;
+
+    /*
+     * Nếu không có Auth User theo profile ID,
+     * mới tìm theo email chuẩn.
+     */
+    if (!existingUser) {
+      existingUser =
+        usersData.users.find(
+          (user) =>
+            user.email?.toLowerCase() ===
+            email.toLowerCase()
+        );
+    }
+
+    // 4. Đã có Auth user
     if (existingUser) {
       authUserId = existingUser.id;
 
+      /*
+       * Với tài khoản cũ như Tia,
+       * phải đăng nhập bằng email thật của Auth user.
+       */
+      authLoginEmail =
+        existingUser.email ?? email;
+
       // Đồng bộ password với mã hiện tại
-      const { error: updateAuthError } =
+      const {
+        error: updateAuthError,
+      } =
         await admin.auth.admin.updateUserById(
           authUserId,
           {
             password: authPassword,
             email_confirm: true,
+            user_metadata: {
+              staff_name: staffName,
+              role: result.role,
+            },
           }
         );
 
@@ -129,13 +193,18 @@ export async function POST(request: NextRequest) {
           {
             error:
               "Không thể cập nhật tài khoản đăng nhập.",
+            detail:
+              updateAuthError.message,
           },
           { status: 500 }
         );
       }
     } else {
-      // 4. Tạo Auth user nếu staff chưa có
-      const { data: createdUser, error: createError } =
+      // 5. Chưa có Auth user → tạo mới
+      const {
+        data: createdUser,
+        error: createError,
+      } =
         await admin.auth.admin.createUser({
           email,
           password: authPassword,
@@ -146,7 +215,10 @@ export async function POST(request: NextRequest) {
           },
         });
 
-      if (createError || !createdUser.user) {
+      if (
+        createError ||
+        !createdUser.user
+      ) {
         console.error(
           "CREATE AUTH USER ERROR:",
           createError
@@ -156,171 +228,202 @@ export async function POST(request: NextRequest) {
           {
             error:
               "Không thể tạo tài khoản đăng nhập staff.",
+            detail:
+              createError?.message,
           },
           { status: 500 }
         );
       }
 
-      authUserId = createdUser.user.id;
+      authUserId =
+        createdUser.user.id;
+
+      authLoginEmail = email;
     }
 
-    // 5. Đảm bảo profiles có đúng user ID
-const {
-  data: profile,
-  error: profileError,
-} = await admin
-  .from("profiles")
-  .select("id, name, role")
-  .eq("id", authUserId)
-  .maybeSingle();
-
-if (profileError) {
-  console.error(
-    "PROFILE CHECK ERROR:",
-    profileError
-  );
-
-  return NextResponse.json(
-    {
-      error:
-        "Không thể kiểm tra profile staff.",
-    },
-    {
-      status: 500,
-    }
-  );
-}
-
-/*
- * Nếu profile đã tồn tại theo Auth User ID
- * thì đồng bộ lại tên + role.
- */
-if (profile) {
-  const { error: profileUpdateError } =
-    await admin
-      .from("profiles")
-      .update({
-        name: staffName,
-        role: result.role,
-      })
-      .eq("id", authUserId);
-
-  if (profileUpdateError) {
-    console.error(
-      "PROFILE UPDATE ERROR:",
-      profileUpdateError
-    );
-
-    return NextResponse.json(
-      {
-        error:
-          "Không thể cập nhật profile cho staff.",
-      },
-      {
-        status: 500,
-      }
-    );
-  }
-} else {
-  /*
-   * Không có profile theo ID.
-   *
-   * Kiểm tra tiếp theo tên staff.
-   * Trường hợp này xử lý các tài khoản cũ
-   * như Tia đã có profile nhưng ID Auth cũ.
-   */
-  const {
-    data: oldProfile,
-    error: oldProfileError,
-  } = await admin
-    .from("profiles")
-    .select("id, name, role")
-    .eq("name", staffName)
-    .maybeSingle();
-
-  if (oldProfileError) {
-    console.error(
-      "OLD PROFILE CHECK ERROR:",
-      oldProfileError
-    );
-
-    return NextResponse.json(
-      {
-        error:
-          "Không thể kiểm tra profile staff cũ.",
-      },
-      {
-        status: 500,
-      }
-    );
-  }
-
-  if (oldProfile) {
     /*
-     * Đã có profile cùng tên nhưng ID cũ.
-     * Chuyển profile sang Auth User hiện tại.
+     * 6. Đảm bảo profiles có đúng Auth User ID
      */
-    const { error: oldProfileUpdateError } =
-      await admin
+    const {
+      data: profile,
+      error: profileError,
+    } = await admin
+      .from("profiles")
+      .select("id, name, role")
+      .eq("id", authUserId)
+      .maybeSingle();
+
+    if (profileError) {
+      console.error(
+        "PROFILE CHECK ERROR:",
+        profileError
+      );
+
+      return NextResponse.json(
+        {
+          error:
+            "Không thể kiểm tra profile staff.",
+          detail:
+            profileError.message,
+        },
+        { status: 500 }
+      );
+    }
+
+    /*
+     * Profile đã tồn tại đúng Auth User ID
+     * → chỉ đồng bộ tên và role.
+     */
+    if (profile) {
+      const {
+        error: profileUpdateError,
+      } = await admin
         .from("profiles")
         .update({
-          id: authUserId,
           name: staffName,
           role: result.role,
         })
-        .eq("id", oldProfile.id);
+        .eq("id", authUserId);
 
-    if (oldProfileUpdateError) {
-      console.error(
-        "OLD PROFILE UPDATE ERROR:",
-        oldProfileUpdateError
-      );
+      if (profileUpdateError) {
+        console.error(
+          "PROFILE UPDATE ERROR:",
+          profileUpdateError
+        );
 
-      return NextResponse.json(
-        {
-          error:
-            "Không thể đồng bộ profile staff.",
-        },
-        {
-          status: 500,
+        return NextResponse.json(
+          {
+            error:
+              "Không thể cập nhật profile cho staff.",
+            detail:
+              profileUpdateError.message,
+          },
+          { status: 500 }
+        );
+      }
+    } else {
+      /*
+       * Không có profile theo Auth User ID.
+       *
+       * Kiểm tra profile cũ theo tên.
+       */
+      const {
+        data: oldProfile,
+        error: oldProfileError,
+      } = await admin
+        .from("profiles")
+        .select("id, name, role")
+        .eq("name", staffName)
+        .maybeSingle();
+
+      if (oldProfileError) {
+        console.error(
+          "OLD PROFILE CHECK ERROR:",
+          oldProfileError
+        );
+
+        return NextResponse.json(
+          {
+            error:
+              "Không thể kiểm tra profile staff cũ.",
+            detail:
+              oldProfileError.message,
+          },
+          { status: 500 }
+        );
+      }
+
+      if (oldProfile) {
+        /*
+         * Profile cũ tồn tại nhưng không liên kết
+         * với Auth User hiện tại.
+         *
+         * Xóa profile cũ rồi tạo lại bằng Auth ID mới.
+         */
+        const {
+          error: oldProfileDeleteError,
+        } = await admin
+          .from("profiles")
+          .delete()
+          .eq("id", oldProfile.id);
+
+        if (oldProfileDeleteError) {
+          console.error(
+            "OLD PROFILE DELETE ERROR:",
+            oldProfileDeleteError
+          );
+
+          return NextResponse.json(
+            {
+              error:
+                "Không thể xóa profile staff cũ.",
+              detail:
+                oldProfileDeleteError.message,
+            },
+            { status: 500 }
+          );
         }
-      );
-    }
-  } else {
-    /*
-     * Hoàn toàn chưa có profile.
-     * Tạo mới.
-     */
-    const {
-      error: profileInsertError,
-    } = await admin
-      .from("profiles")
-      .insert({
-        id: authUserId,
-        name: staffName,
-        role: result.role,
-      });
 
-    if (profileInsertError) {
-      console.error(
-        "PROFILE INSERT ERROR:",
-        profileInsertError
-      );
+        const {
+          error: profileInsertError,
+        } = await admin
+          .from("profiles")
+          .insert({
+            id: authUserId,
+            name: staffName,
+            role: result.role,
+          });
 
-      return NextResponse.json(
-        {
-          error:
-            "Không thể tạo profile cho staff.",
-        },
-        {
-          status: 500,
+        if (profileInsertError) {
+          console.error(
+            "PROFILE RECREATE ERROR:",
+            profileInsertError
+          );
+
+          return NextResponse.json(
+            {
+              error:
+                "Không thể tạo lại profile staff.",
+              detail:
+                profileInsertError.message,
+            },
+            { status: 500 }
+          );
         }
-      );
-    }
-  }
-}
+      } else {
+        /*
+         * Hoàn toàn chưa có profile → tạo mới.
+         */
+        const {
+          error: profileInsertError,
+        } = await admin
+          .from("profiles")
+          .insert({
+            id: authUserId,
+            name: staffName,
+            role: result.role,
+          });
 
-    // 6. Tạo Supabase Auth session
+        if (profileInsertError) {
+          console.error(
+            "PROFILE INSERT ERROR:",
+            profileInsertError
+          );
+
+          return NextResponse.json(
+            {
+              error:
+                "Không thể tạo profile cho staff.",
+              detail:
+                profileInsertError.message,
+            },
+            { status: 500 }
+          );
+        }
+      }
+    }
+
+    // 7. Tạo Supabase Auth session
     const cookieStore = await cookies();
 
     const response = NextResponse.json({
@@ -329,8 +432,10 @@ if (profile) {
     });
 
     const supabase = createServerClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY!,
+      process.env
+        .NEXT_PUBLIC_SUPABASE_URL!,
+      process.env
+        .NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY!,
       {
         cookies: {
           getAll() {
@@ -339,7 +444,11 @@ if (profile) {
 
           setAll(cookiesToSet) {
             cookiesToSet.forEach(
-              ({ name, value, options }) => {
+              ({
+                name,
+                value,
+                options,
+              }) => {
                 response.cookies.set(
                   name,
                   value,
@@ -352,9 +461,11 @@ if (profile) {
       }
     );
 
-    const { error: signInError } =
+    const {
+      error: signInError,
+    } =
       await supabase.auth.signInWithPassword({
-        email,
+        email: authLoginEmail,
         password: authPassword,
       });
 
@@ -368,6 +479,8 @@ if (profile) {
         {
           error:
             "Xác thực staff thành công nhưng không thể tạo phiên đăng nhập.",
+          detail:
+            signInError.message,
         },
         { status: 500 }
       );

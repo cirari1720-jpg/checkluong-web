@@ -1761,15 +1761,26 @@ async function updatePerson(
       ])
     );
 
-    /* ==========================================
+  /* ==========================================
    2A. TẠO / CẬP NHẬT ĐƠN STAFF
 ========================================== */
 
 for (const order of newStaffOrders) {
-  const oldOrder = oldStaffMap.get(order.id);
+  const orderId = String(order.id ?? "").trim();
 
-  /* Đơn mới */
-  if (!oldOrder) {
+  /*
+   * ID bắt đầu bằng "new-" = ĐƠN MỚI
+   *
+   * Không quan tâm nó có nằm trong oldStaffOrders hay không.
+   * Hễ là ID tạm thì luôn phải POST.
+   */
+  const isTemporaryOrder = orderId.startsWith("new-");
+
+  /* ==========================================
+     ĐƠN MỚI
+  ========================================== */
+
+  if (isTemporaryOrder) {
     const response = await fetch("/api/orders", {
       method: "POST",
       headers: {
@@ -1805,9 +1816,13 @@ for (const order of newStaffOrders) {
 
     const createdOrder = await response.json();
 
+    /*
+     * Supabase trả ID thật.
+     * Thay ID tạm bằng ID thật trong state.
+     */
     if (createdOrder?.id != null) {
       const realId = String(createdOrder.id);
-      const tempId = String(order.id);
+      const tempId = orderId;
 
       setDatabase((previous) => {
         const current = previous[staffName];
@@ -1818,17 +1833,20 @@ for (const order of newStaffOrders) {
 
         return {
           ...previous,
+
           [staffName]: {
             ...current,
-            staffOrders: (current.staffOrders ?? []).map(
-              (item) =>
-                String(item.id) === tempId
-                  ? {
-                      ...item,
-                      id: realId,
-                    }
-                  : item
-            ),
+
+            staffOrders:
+              (current.staffOrders ?? []).map(
+                (item) =>
+                  String(item.id) === tempId
+                    ? {
+                        ...item,
+                        id: realId,
+                      }
+                    : item
+              ),
           },
         };
       });
@@ -1837,44 +1855,75 @@ for (const order of newStaffOrders) {
     continue;
   }
 
-  /* Đơn cũ nhưng bị thay đổi */
-  if (
+  /* ==========================================
+     ĐƠN CŨ
+  ========================================== */
+
+  const oldOrder = oldStaffMap.get(order.id);
+
+  if (!oldOrder) {
+    continue;
+  }
+
+  /*
+   * Chỉ PUT khi đơn cũ thực sự thay đổi.
+   */
+  const amountChanged =
     Number(oldOrder.amount || 0) !==
-      Number(order.amount || 0) ||
-    oldOrder.order_code !== order.order_code
+    Number(order.amount || 0);
+
+  const codeChanged =
+    String(oldOrder.order_code ?? "") !==
+    String(order.order_code ?? "");
+
+  if (!amountChanged && !codeChanged) {
+    continue;
+  }
+
+  /*
+   * Đơn cũ bắt buộc phải có ID số thật.
+   */
+  const numericOrderId = Number(order.id);
+
+  if (
+    !Number.isInteger(numericOrderId) ||
+    numericOrderId <= 0
   ) {
-    const numericOrderId = Number(order.id);
+    throw new Error(
+      `ID đơn không hợp lệ: ${order.id}`
+    );
+  }
 
-    if (
-      !Number.isInteger(numericOrderId) ||
-      numericOrderId <= 0
-    ) {
-      throw new Error(
-        `ID đơn không hợp lệ: ${order.id}`
-      );
-    }
+  const response = await fetch("/api/orders", {
+    method: "PUT",
 
-    const response = await fetch("/api/orders", {
-      method: "PUT",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        id: numericOrderId,
-        order_id: numericOrderId,
-        order_code: order.order_code,
-        staff_name: staffName,
-        amount: Number(order.amount || 0),
-        order_type: "staff",
-      }),
-    });
+    headers: {
+      "Content-Type": "application/json",
+    },
 
-    if (!response.ok) {
-      throw new Error(
-        "Không thể cập nhật đơn: " +
-          (await response.text())
-      );
-    }
+    body: JSON.stringify({
+      id: numericOrderId,
+      order_id: numericOrderId,
+
+      order_code:
+        order.order_code,
+
+      staff_name:
+        staffName,
+
+      amount:
+        Number(order.amount || 0),
+
+      order_type:
+        "staff",
+    }),
+  });
+
+  if (!response.ok) {
+    throw new Error(
+      "Không thể cập nhật đơn: " +
+        (await response.text())
+    );
   }
 }
     /* ==========================================
@@ -2022,44 +2071,73 @@ continue;
 
       }
 
-      /* Đơn trực bị sửa */
-      if (
-        Number(oldOrder.amount || 0) !==
-        Number(order.amount || 0)
-      ) {
-        const response = await fetch(
-          "/api/orders",
-          {
-            method: "PUT",
-            headers: {
-              "Content-Type":
-                "application/json",
-            },
-            body: JSON.stringify({
-id: String(order.id),
-order_id: String(order.id),
-  order_code:
-    order.order_code,
+    /* Đơn trực bị sửa */
+if (
+  Number(oldOrder.amount || 0) !==
+  Number(order.amount || 0)
+) {
+  const orderId =
+    String(order.id ?? "").trim();
 
-  staff_name:
-    staffName,
+  /*
+   * Đơn còn ID tạm thì chưa được PUT.
+   * Đơn mới phải được POST trước để lấy ID thật.
+   */
+  if (orderId.startsWith("new-")) {
+    continue;
+  }
 
-  amount:
-    Number(order.amount || 0),
+  const numericOrderId =
+    Number(orderId);
 
-  order_type: "page",
-}),
-          }
-        );
+  if (
+    !Number.isInteger(numericOrderId) ||
+    numericOrderId <= 0
+  ) {
+    throw new Error(
+      `ID đơn trực không hợp lệ: ${order.id}`
+    );
+  }
 
-        if (!response.ok) {
-          throw new Error(
-            "Không thể cập nhật đơn trực: " +
-              (await response.text())
-          );
-        }
-      }
+  const response = await fetch(
+    "/api/orders",
+    {
+      method: "PUT",
+
+      headers: {
+        "Content-Type":
+          "application/json",
+      },
+
+      body: JSON.stringify({
+        id: numericOrderId,
+
+        order_id:
+          numericOrderId,
+
+        order_code:
+          order.order_code,
+
+        staff_name:
+          staffName,
+
+        amount:
+          Number(order.amount || 0),
+
+        order_type:
+          "page",
+      }),
     }
+  );
+
+  if (!response.ok) {
+    throw new Error(
+      "Không thể cập nhật đơn trực: " +
+        (await response.text())
+    );
+  }
+}
+}
 
     /* ==========================================
        3B. XÓA ĐƠN TRỰC

@@ -1957,14 +1957,14 @@ for (const penalty of newPenalties) {
      PHẠT MỚI
   ------------------------------------------ */
 
-  if (!oldPenalty) {
-    if (!penalty.error.trim()) {
-      throw new Error(
-        "Vui lòng nhập nội dung lỗi phạt."
-      );
-    }
+if (!oldPenalty) {
+  // Khoản phạt mới nhưng chưa nhập nội dung
+  // thì bỏ qua, không báo lỗi.
+  if (!penalty.error.trim()) {
+    continue;
+  }
 
-    const response = await fetch(
+  const response = await fetch(
       "/api/staff-penalties",
       {
         method: "POST",

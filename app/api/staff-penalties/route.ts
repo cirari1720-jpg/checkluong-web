@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { createClient } from "@/lib/supabase/server";
+import { createClient, createAdminClient } from "@/lib/supabase/server";
 import {
   getCurrentUserRole,
   getCurrentUserName,
@@ -513,6 +513,140 @@ export async function PATCH(request: Request) {
     return NextResponse.json(
       {
         error: "Không thể sửa phạt",
+      },
+      {
+        status: 500,
+      }
+    );
+  }
+}
+// =====================================================
+// DELETE - XÓA KHOẢN PHẠT
+// =====================================================
+
+export async function DELETE(request: Request) {
+  try {
+    const supabase = await createClient();
+
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+
+    if (!user) {
+      return NextResponse.json(
+        {
+          error: "Chưa đăng nhập",
+        },
+        {
+          status: 401,
+        }
+      );
+    }
+
+    const role = await getCurrentUserRole();
+
+    if (role !== "admin") {
+      return NextResponse.json(
+        {
+          error: "Chỉ admin mới được xóa phạt",
+        },
+        {
+          status: 403,
+        }
+      );
+    }
+
+    const body = await request.json();
+
+    const numericId = Number(body.id);
+
+    console.log("===== DELETE PENALTY =====");
+    console.log("ID nhận được:", body.id);
+    console.log("ID sau Number():", numericId);
+
+    if (
+      !Number.isInteger(numericId) ||
+      numericId <= 0
+    ) {
+      return NextResponse.json(
+        {
+          error: "ID khoản phạt không hợp lệ",
+        },
+        {
+          status: 400,
+        }
+      );
+    }
+
+    /*
+     * Dùng Admin Client để DELETE không bị RLS chặn.
+     */
+    const admin = createAdminClient();
+
+    const {
+      data,
+      error,
+    } = await admin
+      .from("staff_penalties")
+      .delete()
+      .eq("id", numericId)
+      .select(
+        "id, staff_name, error, amount, form, created_at"
+      )
+      .maybeSingle();
+
+    if (error) {
+      console.error(
+        "DELETE STAFF PENALTY ERROR:",
+        error
+      );
+
+      return NextResponse.json(
+        {
+          error: error.message,
+          code: error.code,
+          details: error.details,
+          hint: error.hint,
+        },
+        {
+          status: 500,
+        }
+      );
+    }
+
+    if (!data) {
+      return NextResponse.json(
+        {
+          error: "Không tìm thấy khoản phạt",
+          id: numericId,
+        },
+        {
+          status: 404,
+        }
+      );
+    }
+
+    console.log(
+      "DELETE PENALTY SUCCESS:",
+      data
+    );
+
+    return NextResponse.json({
+      success: true,
+      data,
+    });
+  } catch (error) {
+    console.error(
+      "DELETE /api/staff-penalties:",
+      error
+    );
+
+    return NextResponse.json(
+      {
+        error:
+          error instanceof Error
+            ? error.message
+            : "Không thể xóa phạt",
       },
       {
         status: 500,

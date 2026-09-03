@@ -1995,34 +1995,47 @@ const oldPenalties =
 const newPenalties =
   updatedPerson.penalties ?? [];
 
+/*
+ * ID dạng số = ID thật trong Supabase.
+ * ID có dấu "-" = ID tạm tạo trên giao diện.
+ */
+function isRealPenaltyId(id: unknown) {
+  return /^\d+$/.test(
+    String(id ?? "")
+  );
+}
+
 /* ==========================================
    5A. THÊM / SỬA PHẠT
 ========================================== */
 
 for (const penalty of newPenalties) {
-  const penaltyId = String(
-    penalty.id ?? ""
-  );
+  const penaltyId =
+    String(penalty.id ?? "");
 
-  /*
-   * Tìm khoản phạt cũ trong database
-   */
   const oldPenalty =
     oldPenalties.find(
       (old) =>
-        String(old.id) === penaltyId
+        String(old.id ?? "") ===
+        penaltyId
     );
 
-  /* ------------------------------------------
-     PHẠT MỚI
-  ------------------------------------------ */
+  const hasRealId =
+    isRealPenaltyId(penaltyId);
 
-  if (!oldPenalty) {
+  /*
+   * ========================================
+   * PHẠT MỚI
+   *
+   * Nếu ID là ID tạm hoặc chưa tồn tại
+   * trong danh sách cũ → POST.
+   * ========================================
+   */
+  if (!oldPenalty || !hasRealId) {
     /*
-     * Dòng mới nhưng chưa nhập nội dung
-     * thì không gửi API.
+     * Chưa nhập lỗi thì chưa lưu.
      */
-    if (!penalty.error.trim()) {
+    if (!penalty.error?.trim()) {
       continue;
     }
 
@@ -2036,10 +2049,15 @@ for (const penalty of newPenalties) {
         },
         body: JSON.stringify({
           staff_name: staffName,
-          error: penalty.error.trim(),
-          amount: Number(
-            penalty.amount || 0
-          ),
+
+          error:
+            penalty.error.trim(),
+
+          amount:
+            Number(
+              penalty.amount || 0
+            ),
+
           form:
             penalty.form?.trim() ?? "",
         }),
@@ -2056,132 +2074,144 @@ for (const penalty of newPenalties) {
       );
     }
 
-    /*
-     * Lấy ID thật từ Supabase
-     */
+    let createdPenalty:
+      | {
+          id?: number | string;
+        }
+      | null = null;
+
     try {
-      const createdPenalty =
+      createdPenalty =
         JSON.parse(responseText);
-
-      if (createdPenalty?.id != null) {
-        penalty.id = String(
-          createdPenalty.id
-        );
-      }
     } catch {
-      // API đã trả thành công
+      createdPenalty = null;
     }
 
-    continue;
-  }
-
-  /* ------------------------------------------
-     PHẠT CŨ BỊ SỬA
-  ------------------------------------------ */
-
-  const numericId =
-    Number(oldPenalty.id);
-
-  if (
-    !Number.isInteger(numericId) ||
-    numericId <= 0
-  ) {
-    throw new Error(
-      "ID khoản phạt không hợp lệ."
-    );
-  }
-
-  const penaltyChanged =
-    oldPenalty.error !== penalty.error ||
-    Number(oldPenalty.amount || 0) !==
-      Number(penalty.amount || 0) ||
-    oldPenalty.form !== penalty.form;
-
-  if (penaltyChanged) {
-    if (!penalty.error.trim()) {
-      throw new Error(
-        "Vui lòng nhập nội dung lỗi phạt."
+    /*
+     * ======================================
+     * API đã tạo thành công.
+     *
+     * Lấy ID thật của Supabase và thay
+     * ID tạm trong database local.
+     * ======================================
+     */
+    if (
+      createdPenalty?.id != null
+    ) {
+      const realId = String(
+        createdPenalty.id
       );
+
+      /*
+       * Cập nhật ID thật vào object
+       * đang xử lý.
+       */
+      penalty.id = realId;
+
+      /*
+       * QUAN TRỌNG:
+       * database trước đó đã lưu ID tạm.
+       * Phải thay ID tạm bằng ID thật.
+       */
+      setDatabase((previous) => {
+        const current =
+          previous[staffName];
+
+        if (!current) {
+          return previous;
+        }
+
+        return {
+          ...previous,
+
+          [staffName]: {
+            ...current,
+
+            penalties:
+              (
+                current.penalties ?? []
+              ).map((item) =>
+                String(item.id) ===
+                penaltyId
+                  ? {
+                      ...item,
+                      id: realId,
+                    }
+                  : item
+              ),
+          },
+        };
+      });
     }
 
-    const response = await fetch(
-      "/api/staff-penalties",
-      {
-        method: "PATCH",
-        headers: {
-          "Content-Type":
-            "application/json",
-        },
-        body: JSON.stringify({
-          id: numericId,
-          error: penalty.error.trim(),
-          amount: Number(
-            penalty.amount || 0
-          ),
-          form:
-            penalty.form?.trim() ?? "",
-        }),
-      }
-    );
-
-    const responseText =
-      await response.text();
-
-    if (!response.ok) {
-      throw new Error(
-        "Không thể cập nhật phạt: " +
-          responseText
-      );
-    }
-  }
-}
-
-/* ==========================================
-   5B. XÓA PHẠT
-========================================== */
-
-for (const oldPenalty of oldPenalties) {
-  const oldId =
-    String(oldPenalty.id ?? "");
-
-  const stillExists =
-    newPenalties.some(
-      (penalty) =>
-        String(penalty.id) === oldId
-    );
-
-  if (stillExists) {
     continue;
   }
 
   /*
-   * Chỉ xóa ID thật trong database.
-   * ID tạm trên giao diện không được DELETE.
+   * ========================================
+   * PHẠT CŨ BỊ SỬA
+   * ========================================
    */
-  if (!/^\d+$/.test(oldId)) {
-    continue;
-  }
 
   const numericId =
-    Number(oldId);
+    Number(oldPenalty.id);
 
+  /*
+   * Phòng trường hợp dữ liệu cũ
+   * không hợp lệ.
+   */
   if (
     !Number.isInteger(numericId) ||
     numericId <= 0
   ) {
+    continue;
+  }
+
+  const penaltyChanged =
+    oldPenalty.error !==
+      penalty.error ||
+    Number(
+      oldPenalty.amount || 0
+    ) !==
+      Number(
+        penalty.amount || 0
+      ) ||
+    oldPenalty.form !==
+      penalty.form;
+
+  if (!penaltyChanged) {
+    continue;
+  }
+
+  /*
+   * Không cho lưu khoản phạt
+   * không có nội dung lỗi.
+   */
+  if (!penalty.error?.trim()) {
     continue;
   }
 
   const response = await fetch(
     "/api/staff-penalties",
     {
-      method: "DELETE",
+      method: "PATCH",
       headers: {
         "Content-Type":
           "application/json",
       },
       body: JSON.stringify({
         id: numericId,
+
+        error:
+          penalty.error.trim(),
+
+        amount:
+          Number(
+            penalty.amount || 0
+          ),
+
+        form:
+          penalty.form?.trim() ?? "",
       }),
     }
   );
@@ -2191,11 +2221,12 @@ for (const oldPenalty of oldPenalties) {
 
   if (!response.ok) {
     throw new Error(
-      "Không thể xóa phạt: " +
+      "Không thể cập nhật phạt: " +
         responseText
     );
   }
 }
+
 /* ==========================================
    5B. XÓA PHẠT
 ========================================== */
@@ -2205,13 +2236,14 @@ for (const oldPenalty of oldPenalties) {
     String(oldPenalty.id ?? "");
 
   /*
-   * Nếu khoản cũ vẫn còn trong UI
-   * thì không xóa.
+   * Khoản phạt vẫn còn trên giao diện
+   * → không xóa.
    */
   const stillExists =
     newPenalties.some(
       (penalty) =>
-        String(penalty.id) === oldId
+        String(penalty.id ?? "") ===
+        oldId
     );
 
   if (stillExists) {
@@ -2219,12 +2251,10 @@ for (const oldPenalty of oldPenalties) {
   }
 
   /*
-   * Chỉ DELETE ID thật từ database.
-   * Không bao giờ DELETE ID tạm.
+   * ID tạm không thuộc database
+   * → không DELETE.
    */
-  if (
-    !/^\d+$/.test(oldId)
-  ) {
+  if (!isRealPenaltyId(oldId)) {
     continue;
   }
 

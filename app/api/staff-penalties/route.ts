@@ -1,10 +1,6 @@
-import { NextResponse } from "next/server";
+﻿import { NextResponse } from "next/server";
 import { createClient, createAdminClient } from "@/lib/supabase/server";
-import {
-  getCurrentUserRole,
-  getCurrentUserName,
-} from "@/lib/supabase/auth";
-
+import { getCurrentAppUser } from "@/lib/supabase/app-auth";
 
 // =====================================================
 // GET - LẤY DANH SÁCH PHẠT
@@ -12,13 +8,10 @@ import {
 
 export async function GET() {
   try {
+    const appUser = await getCurrentAppUser();
     const supabase = await createClient();
 
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
-
-    if (!user) {
+    if (!appUser) {
       return NextResponse.json(
         {
           error: "Chưa đăng nhập",
@@ -29,20 +22,9 @@ export async function GET() {
       );
     }
 
-    const role = await getCurrentUserRole();
+ const admin = createAdminClient();
 
-    if (!role) {
-      return NextResponse.json(
-        {
-          error: "Không xác định được quyền",
-        },
-        {
-          status: 403,
-        }
-      );
-    }
-
-    let query = supabase
+let query = admin
       .from("staff_penalties")
       .select(
         "id, staff_name, error, amount, form, created_at"
@@ -51,23 +33,14 @@ export async function GET() {
         ascending: false,
       });
 
-    // Staff chỉ được xem khoản phạt của chính mình
-   if (role === "staff") {
-  const staffName = await getCurrentUserName();
+    // Staff chỉ xem khoản phạt của chính mình
+    if (appUser.role === "staff") {
+      query = query.eq(
+        "staff_name",
+        appUser.name
+      );
+    }
 
-  if (!staffName) {
-    return NextResponse.json(
-      {
-        error: "Staff chưa có tên trong profiles",
-      },
-      {
-        status: 403,
-      }
-    );
-  }
-
-  query = query.eq("staff_name", staffName);
-}
     const { data, error } = await query;
 
     if (error) {
@@ -86,7 +59,9 @@ export async function GET() {
       );
     }
 
-    return NextResponse.json(data ?? []);
+    return NextResponse.json(
+      data ?? []
+    );
   } catch (error) {
     console.error(
       "GET /api/staff-penalties:",
@@ -112,13 +87,9 @@ export async function POST(
   request: Request
 ) {
   try {
-    const supabase = await createClient();
+    const appUser = await getCurrentAppUser();
 
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
-
-    if (!user) {
+    if (!appUser) {
       return NextResponse.json(
         {
           error: "Chưa đăng nhập",
@@ -129,12 +100,11 @@ export async function POST(
       );
     }
 
-    const role = await getCurrentUserRole();
-
-    if (role !== "admin") {
+    // Chỉ Admin được thêm phạt
+    if (appUser.role !== "admin") {
       return NextResponse.json(
         {
-          error: "Chỉ admin mới được thêm phạt",
+          error: "Chỉ admin mới được thêm khoản phạt",
         },
         {
           status: 403,
@@ -144,17 +114,23 @@ export async function POST(
 
     const body = await request.json();
 
-    const {
-      staff_name,
-      error: errorText,
-      amount,
-      form,
-    } = body;
+    const staffName = String(
+      body.staff_name || ""
+    ).trim();
 
-    if (
-      typeof staff_name !== "string" ||
-      !staff_name.trim()
-    ) {
+    const errorText = String(
+      body.error || ""
+    ).trim();
+
+    const amount = Number(
+      body.amount ?? 0
+    );
+
+    const form = String(
+      body.form || ""
+    ).trim();
+
+    if (!staffName) {
       return NextResponse.json(
         {
           error: "Thiếu tên staff",
@@ -165,10 +141,7 @@ export async function POST(
       );
     }
 
-    if (
-      typeof errorText !== "string" ||
-      !errorText.trim()
-    ) {
+    if (!errorText) {
       return NextResponse.json(
         {
           error: "Thiếu nội dung lỗi",
@@ -179,13 +152,9 @@ export async function POST(
       );
     }
 
-    const numericAmount = Number(
-      amount ?? 0
-    );
-
     if (
-      !Number.isFinite(numericAmount) ||
-      numericAmount < 0
+      !Number.isFinite(amount) ||
+      amount < 0
     ) {
       return NextResponse.json(
         {
@@ -197,21 +166,22 @@ export async function POST(
       );
     }
 
-    const { data, error } = await supabase
+    const admin =
+      createAdminClient();
+
+    const {
+      data,
+      error,
+    } = await admin
       .from("staff_penalties")
       .insert({
-        staff_name: staff_name.trim(),
-        error: errorText.trim(),
-        amount: numericAmount,
-        form:
-          typeof form === "string"
-            ? form.trim()
-            : "",
+        staff_name: staffName,
+        error: errorText,
+        amount,
+        form,
       })
-      .select(
-        "id, staff_name, error, amount, form, created_at"
-      )
-      .maybeSingle();
+      .select()
+      .single();
 
     if (error) {
       console.error(
@@ -222,17 +192,6 @@ export async function POST(
       return NextResponse.json(
         {
           error: error.message,
-        },
-        {
-          status: 500,
-        }
-      );
-    }
-
-    if (!data) {
-      return NextResponse.json(
-        {
-          error: "Không tạo được khoản phạt",
         },
         {
           status: 500,
@@ -254,7 +213,7 @@ export async function POST(
 
     return NextResponse.json(
       {
-        error: "Không thể thêm phạt",
+        error: "Không thể thêm khoản phạt",
       },
       {
         status: 500,
@@ -267,15 +226,13 @@ export async function POST(
 // PATCH - SỬA KHOẢN PHẠT
 // =====================================================
 
-export async function PATCH(request: Request) {
+export async function PATCH(
+  request: Request
+) {
   try {
-    const supabase = await createClient();
+    const appUser = await getCurrentAppUser();
 
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
-
-    if (!user) {
+    if (!appUser) {
       return NextResponse.json(
         {
           error: "Chưa đăng nhập",
@@ -286,12 +243,10 @@ export async function PATCH(request: Request) {
       );
     }
 
-    const role = await getCurrentUserRole();
-
-    if (role !== "admin") {
+    if (appUser.role !== "admin") {
       return NextResponse.json(
         {
-          error: "Chỉ admin mới được sửa phạt",
+          error: "Chỉ admin mới được sửa khoản phạt",
         },
         {
           status: 403,
@@ -301,28 +256,11 @@ export async function PATCH(request: Request) {
 
     const body = await request.json();
 
-    const id = body.id;
-    const errorText = body.error;
-    const amount = body.amount;
-    const form = body.form;
-
-    console.log("===== PATCH PENALTY =====");
-    console.log("BODY:", body);
-    console.log("ID nhận được:", id);
-    console.log("ID type:", typeof id);
-
-    // ==========================================
-    // KIỂM TRA ID
-    // ==========================================
-
-    const numericId = Number(id);
-
-    console.log("ID sau Number():", numericId);
-    console.log("ID type sau Number():", typeof numericId);
+    const id = Number(body.id);
 
     if (
-      !Number.isInteger(numericId) ||
-      numericId <= 0
+      !Number.isInteger(id) ||
+      id <= 0
     ) {
       return NextResponse.json(
         {
@@ -334,17 +272,99 @@ export async function PATCH(request: Request) {
       );
     }
 
-    // ==========================================
-    // KIỂM TRA NỘI DUNG LỖI
-    // ==========================================
+    const updateData: Record<
+      string,
+      unknown
+    > = {};
 
     if (
-      typeof errorText !== "string" ||
-      !errorText.trim()
+      body.staff_name !== undefined
+    ) {
+      const staffName = String(
+        body.staff_name
+      ).trim();
+
+      if (!staffName) {
+        return NextResponse.json(
+          {
+            error: "Tên staff không được để trống",
+          },
+          {
+            status: 400,
+          }
+        );
+      }
+
+      updateData.staff_name =
+        staffName;
+    }
+
+    if (
+      body.error !== undefined
+    ) {
+      const errorText = String(
+        body.error
+      ).trim();
+
+      if (!errorText) {
+        return NextResponse.json(
+          {
+            error:
+              "Nội dung lỗi không được để trống",
+          },
+          {
+            status: 400,
+          }
+        );
+      }
+
+      updateData.error =
+        errorText;
+    }
+
+    if (
+      body.amount !== undefined
+    ) {
+      const amount = Number(
+        body.amount
+      );
+
+      if (
+        !Number.isFinite(amount) ||
+        amount < 0
+      ) {
+        return NextResponse.json(
+          {
+            error:
+              "Số tiền phạt không hợp lệ",
+          },
+          {
+            status: 400,
+          }
+        );
+      }
+
+      updateData.amount =
+        amount;
+    }
+
+    if (
+      body.form !== undefined
+    ) {
+      updateData.form =
+        String(
+          body.form ?? ""
+        ).trim();
+    }
+
+    if (
+      Object.keys(updateData)
+        .length === 0
     ) {
       return NextResponse.json(
         {
-          error: "Thiếu nội dung lỗi",
+          error:
+            "Không có dữ liệu để cập nhật",
         },
         {
           status: 400,
@@ -352,60 +372,28 @@ export async function PATCH(request: Request) {
       );
     }
 
-    // ==========================================
-    // KIỂM TRA SỐ TIỀN
-    // ==========================================
-
-    const numericAmount = Number(amount ?? 0);
-
-    if (
-      !Number.isFinite(numericAmount) ||
-      numericAmount < 0
-    ) {
-      return NextResponse.json(
-        {
-          error: "Số tiền phạt không hợp lệ",
-        },
-        {
-          status: 400,
-        }
-      );
-    }
-
-    // ==========================================
-    // KIỂM TRA RECORD TRƯỚC KHI UPDATE
-    // ==========================================
+    const admin =
+      createAdminClient();
 
     const {
-      data: existingPenalty,
-      error: findError,
-    } = await supabase
+      data,
+      error,
+    } = await admin
       .from("staff_penalties")
-      .select(
-        "id, staff_name, error, amount, form, created_at"
-      )
-      .eq("id", numericId)
+      .update(updateData)
+      .eq("id", id)
+      .select()
       .maybeSingle();
 
-    console.log(
-      "EXISTING PENALTY:",
-      existingPenalty
-    );
-
-    console.log(
-      "FIND ERROR:",
-      findError
-    );
-
-    if (findError) {
+    if (error) {
       console.error(
-        "FIND PENALTY ERROR:",
-        findError
+        "PATCH STAFF PENALTY ERROR:",
+        error
       );
 
       return NextResponse.json(
         {
-          error: findError.message,
+          error: error.message,
         },
         {
           status: 500,
@@ -413,11 +401,11 @@ export async function PATCH(request: Request) {
       );
     }
 
-    if (!existingPenalty) {
+    if (!data) {
       return NextResponse.json(
         {
-          error: "Không tìm thấy khoản phạt",
-          id: numericId,
+          error:
+            "Không tìm thấy khoản phạt",
         },
         {
           status: 404,
@@ -425,85 +413,9 @@ export async function PATCH(request: Request) {
       );
     }
 
-    // ==========================================
-    // UPDATE
-    // ==========================================
-
-    const {
-      data: updatedPenalty,
-      error: updateError,
-    } = await supabase
-      .from("staff_penalties")
-      .update({
-        error: errorText.trim(),
-        amount: numericAmount,
-        form:
-          typeof form === "string"
-            ? form.trim()
-            : "",
-      })
-      .eq("id", numericId)
-      .select(
-        "id, staff_name, error, amount, form, created_at"
-      )
-      .maybeSingle();
-
-    console.log(
-      "UPDATED PENALTY:",
-      updatedPenalty
+    return NextResponse.json(
+      data
     );
-
-    console.log(
-      "UPDATE ERROR:",
-      updateError
-    );
-
-    if (updateError) {
-      console.error(
-        "UPDATE PENALTY ERROR:",
-        updateError
-      );
-
-      return NextResponse.json(
-        {
-          error: updateError.message,
-        },
-        {
-          status: 500,
-        }
-      );
-    }
-
-    // ==========================================
-    // UPDATE KHÔNG TRẢ VỀ RECORD
-    // ==========================================
-
-    if (!updatedPenalty) {
-      return NextResponse.json(
-        {
-          error:
-            "Không thể cập nhật khoản phạt. Có thể RLS đang chặn UPDATE.",
-          id: numericId,
-        },
-        {
-          status: 403,
-        }
-      );
-    }
-
-    // ==========================================
-    // SUCCESS
-    // ==========================================
-
-    console.log(
-      "PATCH SUCCESS:",
-      updatedPenalty
-    );
-
-    return NextResponse.json({
-      success: true,
-      data: updatedPenalty,
-    });
   } catch (error) {
     console.error(
       "PATCH /api/staff-penalties:",
@@ -512,7 +424,7 @@ export async function PATCH(request: Request) {
 
     return NextResponse.json(
       {
-        error: "Không thể sửa phạt",
+        error: "Không thể sửa khoản phạt",
       },
       {
         status: 500,
@@ -520,19 +432,18 @@ export async function PATCH(request: Request) {
     );
   }
 }
+
 // =====================================================
 // DELETE - XÓA KHOẢN PHẠT
 // =====================================================
 
-export async function DELETE(request: Request) {
+export async function DELETE(
+  request: Request
+) {
   try {
-    const supabase = await createClient();
+    const appUser = await getCurrentAppUser();
 
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
-
-    if (!user) {
+    if (!appUser) {
       return NextResponse.json(
         {
           error: "Chưa đăng nhập",
@@ -543,12 +454,10 @@ export async function DELETE(request: Request) {
       );
     }
 
-    const role = await getCurrentUserRole();
-
-    if (role !== "admin") {
+    if (appUser.role !== "admin") {
       return NextResponse.json(
         {
-          error: "Chỉ admin mới được xóa phạt",
+          error: "Chỉ admin mới được xóa khoản phạt",
         },
         {
           status: 403,
@@ -558,15 +467,11 @@ export async function DELETE(request: Request) {
 
     const body = await request.json();
 
-    const numericId = Number(body.id);
-
-    console.log("===== DELETE PENALTY =====");
-    console.log("ID nhận được:", body.id);
-    console.log("ID sau Number():", numericId);
+    const id = Number(body.id);
 
     if (
-      !Number.isInteger(numericId) ||
-      numericId <= 0
+      !Number.isInteger(id) ||
+      id <= 0
     ) {
       return NextResponse.json(
         {
@@ -578,10 +483,8 @@ export async function DELETE(request: Request) {
       );
     }
 
-    /*
-     * Dùng Admin Client để DELETE không bị RLS chặn.
-     */
-    const admin = createAdminClient();
+    const admin =
+      createAdminClient();
 
     const {
       data,
@@ -589,10 +492,8 @@ export async function DELETE(request: Request) {
     } = await admin
       .from("staff_penalties")
       .delete()
-      .eq("id", numericId)
-      .select(
-        "id, staff_name, error, amount, form, created_at"
-      )
+      .eq("id", id)
+      .select()
       .maybeSingle();
 
     if (error) {
@@ -604,9 +505,6 @@ export async function DELETE(request: Request) {
       return NextResponse.json(
         {
           error: error.message,
-          code: error.code,
-          details: error.details,
-          hint: error.hint,
         },
         {
           status: 500,
@@ -617,8 +515,8 @@ export async function DELETE(request: Request) {
     if (!data) {
       return NextResponse.json(
         {
-          error: "Không tìm thấy khoản phạt",
-          id: numericId,
+          error:
+            "Không tìm thấy khoản phạt",
         },
         {
           status: 404,
@@ -626,15 +524,12 @@ export async function DELETE(request: Request) {
       );
     }
 
-    console.log(
-      "DELETE PENALTY SUCCESS:",
-      data
+    return NextResponse.json(
+      {
+        success: true,
+        data,
+      }
     );
-
-    return NextResponse.json({
-      success: true,
-      data,
-    });
   } catch (error) {
     console.error(
       "DELETE /api/staff-penalties:",
@@ -643,10 +538,7 @@ export async function DELETE(request: Request) {
 
     return NextResponse.json(
       {
-        error:
-          error instanceof Error
-            ? error.message
-            : "Không thể xóa phạt",
+        error: "Không thể xóa khoản phạt",
       },
       {
         status: 500,

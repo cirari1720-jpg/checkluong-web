@@ -1,11 +1,8 @@
-import { NextResponse } from "next/server";
+﻿import { NextResponse } from "next/server";
 
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
-
-import {
-  getCurrentUserRole,
-} from "@/lib/supabase/auth";
+import { getCurrentAppUser } from "@/lib/supabase/app-auth";
 
 const KPI_FIELDS = [
   "page",
@@ -20,149 +17,219 @@ const KPI_FIELDS = [
 
 type KpiField = (typeof KPI_FIELDS)[number];
 
-export async function GET() {
+async function getCurrentUser() {
+  const appUser = await getCurrentAppUser();
   const supabase = await createClient();
 
+  if (!appUser) {
+    return {
+      user: null,
+      profile: null,
+      supabase,
+    };
+  }
+
+  return {
+    user: {
+      id: appUser.name,
+    },
+    profile: {
+      id: appUser.name,
+      name: appUser.name,
+      role: appUser.role,
+    },
+    supabase,
+  };
+}
+
+export async function GET() {
   const {
-    data: { user },
-  } = await supabase.auth.getUser();
+    user,
+    profile,
+    supabase,
+  } = await getCurrentUser();
 
   if (!user) {
     return NextResponse.json(
-      { error: "Chưa đăng nhập" },
+      { error: "Bạn chưa đăng nhập" },
       { status: 401 }
     );
   }
 
-  const role = await getCurrentUserRole();
-
-  if (!role) {
+  if (!profile) {
     return NextResponse.json(
-      { error: "Không xác định được quyền người dùng" },
+      { error: "Không xác định được tài khoản" },
       { status: 403 }
     );
   }
 
-  let query = supabase
-    .from("staff_kpi")
+ const admin = createAdminClient();
+
+let query = admin
+  .from("staff_kpi")
     .select("*")
     .order("id", { ascending: true });
 
-  // Staff chỉ được xem KPI của chính mình
-  if (role === "staff") {
-    const { data: profile, error: profileError } =
-      await supabase
-        .from("profiles")
-        .select("name")
-        .eq("id", user.id)
-        .single();
-
-    if (profileError || !profile?.name) {
-      return NextResponse.json(
-        { error: "Staff chưa có tên trong profiles" },
-        { status: 403 }
-      );
-    }
-
-    query = query.eq("staff_name", profile.name);
+  // Staff chỉ xem KPI của chính mình
+  if (profile.role === "staff") {
+    query = query.eq(
+      "staff_name",
+      profile.name
+    );
   }
 
-  const { data, error } = await query;
+  const {
+    data,
+    error,
+  } = await query;
 
   if (error) {
+    console.error(
+      "GET /api/kpi ERROR:",
+      error
+    );
+
     return NextResponse.json(
       { error: error.message },
       { status: 500 }
     );
   }
 
-  return NextResponse.json(data);
+  return NextResponse.json(
+    data ?? []
+  );
 }
 
-export async function POST(request: Request) {
-  const supabase = await createClient();
-
+export async function POST(
+  request: Request
+) {
   const {
-    data: { user },
-  } = await supabase.auth.getUser();
+    user,
+    profile,
+  } = await getCurrentUser();
 
   if (!user) {
     return NextResponse.json(
-      { error: "Chưa đăng nhập" },
+      { error: "Bạn chưa đăng nhập" },
       { status: 401 }
     );
   }
 
-  const role = await getCurrentUserRole();
+  if (!profile) {
+    return NextResponse.json(
+      { error: "Không xác định được tài khoản" },
+      { status: 403 }
+    );
+  }
 
-  if (role !== "admin") {
+  // Chỉ Admin được sửa KPI
+  if (profile.role !== "admin") {
     return NextResponse.json(
       {
-        error: "Chỉ admin mới được cập nhật KPI",
+        error: "Chỉ admin mới được sửa KPI",
       },
       { status: 403 }
     );
   }
 
-  const body = await request.json();
+  try {
+    const body = await request.json();
 
-  const staffName = String(
-    body.staff_name || ""
-  ).trim();
+    const staffName = String(
+      body.staff_name || ""
+    ).trim();
 
-  if (!staffName) {
-    return NextResponse.json(
-      {
-        error: "Vui lòng chọn staff",
-      },
-      { status: 400 }
-    );
-  }
+    if (!staffName) {
+      return NextResponse.json(
+        { error: "Thiếu tên staff" },
+        { status: 400 }
+      );
+    }
 
-  const updateData: Record<string, any> = {
-    staff_name: staffName,
-  };
+    const admin = createAdminClient();
 
-  for (const field of KPI_FIELDS) {
-    if (body[field] !== undefined) {
-      const value = Number(body[field]);
+    const payload = {
+      staff_name: staffName,
+      page: Number(body.page ?? 0),
+      photo: Number(body.photo ?? 0),
+      edit_photo: Number(
+        body.edit_photo ?? 0
+      ),
+      video: Number(body.video ?? 0),
+      edit_video: Number(
+        body.edit_video ?? 0
+      ),
+      harem: Number(body.harem ?? 0),
+      host_dan: Number(
+        body.host_dan ?? 0
+      ),
+      host_treo: Number(
+        body.host_treo ?? 0
+      ),
+      updated_at:
+        new Date().toISOString(),
+    };
 
-      if (!Number.isFinite(value)) {
+    for (const field of KPI_FIELDS) {
+      if (
+        !Number.isFinite(
+          payload[field]
+        )
+      ) {
         return NextResponse.json(
           {
-            error: `KPI "${field}" không hợp lệ`,
+            error:
+              `Giá trị KPI "${field}" không hợp lệ`,
           },
           { status: 400 }
         );
       }
-
-      updateData[field] = value;
     }
-  }
 
-const admin = createAdminClient();
+    const {
+      data,
+      error,
+    } = await admin
+      .from("staff_kpi")
+      .upsert(
+        payload,
+        {
+          onConflict: "staff_name",
+        }
+      )
+      .select()
+      .single();
 
-const { data, error } = await admin
-  .from("staff_kpi")
-  .upsert(updateData, {
-    onConflict: "staff_name",
-  })
-  .select()
-  .single();
+    if (error) {
+      console.error(
+        "POST /api/kpi ERROR:",
+        error
+      );
 
-  if (error) {
+      return NextResponse.json(
+        { error: error.message },
+        { status: 500 }
+      );
+    }
+
+    return NextResponse.json(
+      data,
+      { status: 200 }
+    );
+  } catch (error) {
     console.error(
-      "POST /api/kpi ERROR:",
+      "POST /api/kpi EXCEPTION:",
       error
     );
 
     return NextResponse.json(
       {
-        error: error.message,
+        error:
+          error instanceof Error
+            ? error.message
+            : "Không thể cập nhật KPI",
       },
       { status: 500 }
     );
   }
-
-  return NextResponse.json(data);
 }

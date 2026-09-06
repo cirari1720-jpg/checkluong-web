@@ -1,7 +1,8 @@
-import { NextRequest, NextResponse } from "next/server";
+﻿import { NextRequest, NextResponse } from "next/server";
 
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { getCurrentAppUser } from "@/lib/supabase/app-auth";
 
 type OrderBody = {
   id?: string | number;
@@ -23,14 +24,10 @@ type OrderBody = {
 // ======================================================
 
 async function getCurrentUser() {
+  const appUser = await getCurrentAppUser();
   const supabase = await createClient();
 
-  const {
-    data: { user },
-    error: userError,
-  } = await supabase.auth.getUser();
-
-  if (userError || !user) {
+  if (!appUser) {
     return {
       user: null,
       profile: null,
@@ -38,31 +35,15 @@ async function getCurrentUser() {
     };
   }
 
-  const {
-    data: profile,
-    error: profileError,
-  } = await supabase
-    .from("profiles")
-    .select("id, name, role")
-    .eq("id", user.id)
-    .single();
-
-  if (profileError || !profile) {
-    console.error(
-      "GET CURRENT USER PROFILE ERROR:",
-      profileError
-    );
-
-    return {
-      user,
-      profile: null,
-      supabase,
-    };
-  }
-
   return {
-    user,
-    profile,
+    user: {
+      id: appUser.name,
+    },
+    profile: {
+      id: appUser.name,
+      name: appUser.name,
+      role: appUser.role,
+    },
     supabase,
   };
 }
@@ -121,21 +102,23 @@ export async function GET() {
       );
     }
 
-    let query = supabase
-      .from("orders")
-      .select("*")
-      .order("order_date", {
-        ascending: false,
-      })
-      .order("created_at", {
-        ascending: false,
-      });
+ const admin = createAdminClient();
+
+let query = admin
+  .from("orders")
+  .select("*")
+  .order("order_date", {
+    ascending: false,
+  })
+  .order("created_at", {
+    ascending: false,
+  });
 
     // STAFF chỉ xem đơn của chính mình
     if (profile.role === "staff") {
       if (!profile.name) {
         return jsonError(
-          "Tài khoản staff chưa có tên trong profile.",
+          "Tài khoản staff chưa có tên.",
           403
         );
       }
@@ -368,13 +351,6 @@ export async function POST(
 // UPDATE ORDER
 // ======================================================
 // CHỈ ADMIN
-//
-// Hỗ trợ cả:
-//
-// PUT   /api/orders
-// PATCH /api/orders
-//
-// Frontend hiện tại sử dụng PUT.
 // ======================================================
 
 async function updateOrder(
@@ -407,46 +383,38 @@ async function updateOrder(
       );
     }
 
-   const rawBody = await request.text();
+    const rawBody = await request.text();
 
-console.log(
-  "UPDATE /api/orders RAW BODY:",
-  rawBody
-);
+    console.log(
+      "UPDATE /api/orders RAW BODY:",
+      rawBody
+    );
 
-if (!rawBody) {
-  return jsonError(
-    "Request không có body."
-  );
-}
+    if (!rawBody) {
+      return jsonError(
+        "Request không có body."
+      );
+    }
 
-let body: OrderBody;
+    let body: OrderBody;
 
-try {
-  body = JSON.parse(rawBody) as OrderBody;
-} catch {
-  console.error(
-    "UPDATE /api/orders INVALID JSON:",
-    rawBody
-  );
+    try {
+      body = JSON.parse(rawBody) as OrderBody;
+    } catch {
+      console.error(
+        "UPDATE /api/orders INVALID JSON:",
+        rawBody
+      );
 
-  return jsonError(
-    "Body JSON không hợp lệ."
-  );
-}
+      return jsonError(
+        "Body JSON không hợp lệ."
+      );
+    }
 
-console.log(
-  "UPDATE /api/orders PARSED BODY:",
-  body
-);
-
-    // ==================================================
-    // NHẬN ID
-    // ==================================================
-    //
-    // Ưu tiên id.
-    // Nếu không có id thì lấy order_id.
-    //
+    console.log(
+      "UPDATE /api/orders PARSED BODY:",
+      body
+    );
 
     const rawId =
       body.id ??
@@ -489,16 +457,8 @@ console.log(
       id
     );
 
-    // ==================================================
-    // DATA UPDATE
-    // ==================================================
-
     const updateData:
       Record<string, unknown> = {};
-
-    // --------------------------------------------------
-    // NGÀY
-    // --------------------------------------------------
 
     if (
       order_dateIsProvided(body)
@@ -518,10 +478,6 @@ console.log(
         value;
     }
 
-    // --------------------------------------------------
-    // MÃ ĐƠN
-    // --------------------------------------------------
-
     if (
       body.order_code !== undefined
     ) {
@@ -539,10 +495,6 @@ console.log(
       updateData.order_code =
         value;
     }
-
-    // --------------------------------------------------
-    // STAFF
-    // --------------------------------------------------
 
     if (
       body.staff_name !== undefined
@@ -562,10 +514,6 @@ console.log(
         value;
     }
 
-    // --------------------------------------------------
-    // KHÁCH HÀNG
-    // --------------------------------------------------
-
     if (
       body.customer_name !== undefined
     ) {
@@ -576,10 +524,6 @@ console.log(
               body.customer_name
             ).trim();
     }
-
-    // --------------------------------------------------
-    // SỐ TIỀN
-    // --------------------------------------------------
 
     if (
       body.amount !== undefined
@@ -602,10 +546,6 @@ console.log(
         parsedAmount;
     }
 
-    // --------------------------------------------------
-    // TIP
-    // --------------------------------------------------
-
     if (
       body.tip !== undefined
     ) {
@@ -626,10 +566,6 @@ console.log(
       updateData.tip =
         parsedTip;
     }
-
-    // --------------------------------------------------
-    // GHI CHÚ
-    // --------------------------------------------------
 
     if (
       body.note !== undefined
@@ -655,11 +591,6 @@ console.log(
       "UPDATE /api/orders DATA:",
       updateData
     );
-
-    // ==================================================
-    // ADMIN CLIENT
-    // BYPASS RLS
-    // ==================================================
 
     const admin =
       createAdminClient();

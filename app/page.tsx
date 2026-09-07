@@ -2721,9 +2721,14 @@ const totalKpiValue =
 
           <header className="header">
             <div>
-              <div className="brand">
-                📊 TRA CỨU THÔNG TIN
-              </div>
+<div className="brand">
+  <img
+    src="/wolf-logo.png"
+    alt="Wolf"
+    className="brand-logo"
+  />
+  <span className="brand-text">TRA CỨU THÔNG TIN</span>
+</div>
 
               <h1>
                 {isAdmin

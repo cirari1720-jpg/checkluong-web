@@ -536,3 +536,35 @@ body {
   object-fit: cover;
   display: block;
 }
+
+/* ===== BRAND: SÓI ĐEN + CHỮ ĐỎ ===== */
+
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-weight: 800;
+  font-size: 14px;
+  letter-spacing: 0.5px;
+}
+
+.brand-logo {
+  width: 38px;
+  height: 38px;
+  object-fit: contain;
+}
+
+.brand-text {
+  color: #ef4444;
+  font-weight: 800;
+}
+@media (max-width: 480px) {
+  .brand-logo {
+    width: 32px;
+    height: 32px;
+  }
+
+  .brand-text {
+    font-size: 13px;
+  }
+}

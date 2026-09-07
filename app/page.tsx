@@ -41,6 +41,10 @@ const STAFF = [
   "Haru",
 ] as const;
 
+function getDisplayStaffName(name: string) {
+  return name === "Vẹt" ? "Vẹt Cam 🦜" : name;
+}
+
 /*
   Mỏ và Tia:
   - Vẫn là Staff
@@ -2726,7 +2730,7 @@ const totalKpiValue =
               <h1>
                 {isAdmin
                   ? "Quản trị dữ liệu"
-                  : `Xin chào, ${currentUser.name}`}
+                  : `Xin chào, ${getDisplayStaffName(currentUser.name)}`}
               </h1>
 
               <p>
@@ -2782,7 +2786,7 @@ const totalKpiValue =
                         key={name}
                         value={name}
                       >
-                        {name}
+                        {getDisplayStaffName(name)}
                         {isPageStaff(name)
                           ? " — Staff + Trực"
                           : ""}
@@ -2802,7 +2806,7 @@ const totalKpiValue =
                 Đang tra cứu
               </span>
 
-              <h2>{viewingName}</h2>
+              <h2>{getDisplayStaffName(viewingName)}</h2>
 
               <p>
                 {pagePerson

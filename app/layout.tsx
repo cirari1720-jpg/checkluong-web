@@ -4,12 +4,12 @@ import "./globals.css";
 export const metadata: Metadata = {
   title: "Tra cứu thông tin",
   description: "Quản lý KPI và thông tin Staff",
-  metadataBase: new URL("https://checkluong-web-4zou.vercel.app"),
+  metadataBase: new URL("https://checkluong.vercel.app"),
 
   openGraph: {
     title: "Tra cứu thông tin",
     description: "Quản lý KPI và thông tin Staff",
-    url: "https://checkluong-web-4zou.vercel.app",
+    url: "https://checkluong.vercel.app",
     type: "website",
     images: [
       {

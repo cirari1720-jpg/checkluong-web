@@ -11,6 +11,7 @@ type OrderBody = {
   order_date?: string;
   order_code?: string;
   staff_name?: string;
+  order_type?: "staff" | "page";
   customer_name?: string;
 
   amount?: number | string;
@@ -217,6 +218,7 @@ export async function POST(
       order_date,
       order_code,
       staff_name,
+      order_type,
       customer_name,
       amount,
       tip,
@@ -285,6 +287,11 @@ export async function POST(
 
         staff_name:
           String(staff_name).trim(),
+
+        order_type:
+          order_type === "page"
+            ? "page"
+            : "staff",
 
         customer_name:
           customer_name == null
@@ -576,6 +583,26 @@ async function updateOrder(
           : String(
               body.note
             ).trim();
+    }
+    if (
+      body.order_type !== undefined
+    ) {
+      const value =
+        String(body.order_type)
+          .trim()
+          .toLowerCase();
+
+      if (
+        value !== "staff" &&
+        value !== "page"
+      ) {
+        return jsonError(
+          "Loại đơn không hợp lệ."
+        );
+      }
+
+      updateData.order_type =
+        value;
     }
 
     if (

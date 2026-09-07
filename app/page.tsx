@@ -21,7 +21,6 @@ const STAFF = [
   "Byw",
   "Cae",
   "Elis",
-  "Dương",
   "ED",
   "Mỏ",
   "Hàn",
@@ -37,8 +36,7 @@ const STAFF = [
   "Vi",
   "W",
   "Zịt",
-  "Hoàng Bảo",
-  "Haru",
+  "Kio",
 ] as const;
 
 function getDisplayStaffName(name: string) {

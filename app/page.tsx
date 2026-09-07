@@ -1848,7 +1848,8 @@ for (const order of newStaffOrders) {
             numericOrderId,
 
           order_code:
-            order.order_code,
+            String(order.order_code ?? "").trim() ||
+            String(oldOrder.order_code ?? "").trim(),
 
           staff_name:
             staffName,

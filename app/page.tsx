@@ -372,6 +372,13 @@ function OrderEditor({
     };
   }
 
+  if (field === "tip") {
+    next[index] = {
+      ...next[index],
+      tip: Number(value) || 0,
+    };
+  }
+
   if (field === "order_code") {
     next[index] = {
       ...next[index],
@@ -454,6 +461,20 @@ function OrderEditor({
                     )
                   }
                   placeholder="Tiền"
+                />
+
+                <input
+                  type="number"
+                  min="0"
+                  value={order.tip}
+                  onChange={(e) =>
+                    updateOrder(
+                      index,
+                      "tip",
+                      e.target.value
+                    )
+                  }
+                  placeholder="Tip"
                 />
 
                 <button

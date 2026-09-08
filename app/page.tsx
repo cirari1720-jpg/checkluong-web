@@ -2941,7 +2941,7 @@ const totalKpiValue =
                 Đang tra cứu
               </span>
 
-              <h2>{getDisplayStaffName(viewingName)}</h2>
+              <h2 className="staff-name-embossed">{getDisplayStaffName(viewingName)}</h2>
 
               <p>
                 {pagePerson
@@ -4369,7 +4369,4 @@ footer {
   }
 }
 `;
-
-
-
 

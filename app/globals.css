@@ -675,3 +675,10 @@ body {
     width: 100%;
   }
 }
+.staff-name-embossed {
+  font-weight: 900;
+  color: #080d24;
+  letter-spacing: -0.03em;
+  text-shadow: 0 2px 0 #ffffff, 0 4px 0 #d9def0, 0 7px 12px rgba(80, 90, 180, 0.35), 0 12px 22px rgba(80, 90, 180, 0.18);
+}
+

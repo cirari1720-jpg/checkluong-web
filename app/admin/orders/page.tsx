@@ -1312,12 +1312,6 @@ export default function OrdersPage() {
                   <th
                     style={thStyle}
                   >
-                    Khách hàng
-                  </th>
-
-                  <th
-                    style={thStyle}
-                  >
                     Số tiền
                   </th>
 

@@ -568,3 +568,110 @@ body {
     font-size: 13px;
   }
 }
+/* =========================
+   ORDER EDITOR
+========================= */
+
+.order-item {
+  display: grid;
+  grid-template-columns: 36px minmax(180px, 1fr) 150px 130px 90px;
+  align-items: end;
+  gap: 12px;
+
+  width: 100%;
+  padding: 14px;
+
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  background: #fff;
+}
+
+.order-field {
+  min-width: 0;
+}
+
+.order-field label {
+  display: block;
+
+  margin-bottom: 6px;
+
+  font-size: 12px;
+  font-weight: 700;
+  color: #64748b;
+}
+
+.order-field input {
+  width: 100%;
+  min-width: 0;
+  height: 42px;
+
+  padding: 0 11px;
+
+  border: 1px solid #d5dce8;
+  border-radius: 9px;
+
+  background: #fff;
+
+  font-size: 14px;
+  color: #111827;
+
+  outline: none;
+}
+
+.order-field input:focus {
+  border-color: #2563eb;
+}
+
+.order-index {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  width: 36px;
+  height: 42px;
+
+  font-size: 14px;
+  font-weight: 800;
+  color: #475569;
+}
+
+.order-item .danger-btn {
+  width: 90px;
+  height: 42px;
+
+  padding: 0 10px;
+
+  white-space: nowrap;
+  word-break: keep-all;
+
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+
+  font-size: 13px;
+  font-weight: 700;
+}
+
+/* =========================
+   ORDER EDITOR - MOBILE
+========================= */
+
+@media (max-width: 800px) {
+  .order-item {
+    grid-template-columns: 32px minmax(0, 1fr);
+    gap: 10px;
+  }
+
+  .order-index {
+    width: 32px;
+  }
+
+  .order-field {
+    width: 100%;
+  }
+
+  .order-item .danger-btn {
+    grid-column: 2;
+    width: 100%;
+  }
+}

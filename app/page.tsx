@@ -438,7 +438,7 @@ function OrderEditor({
                 </div>
 
                 <div className="order-field">
-                  <label>Tên / Mã đơn</label>
+                  <label>Mã đơn</label>
                   <input
                     value={order.order_code}
                     onChange={(e) =>
@@ -448,7 +448,7 @@ function OrderEditor({
                         e.target.value
                       )
                     }
-                    placeholder="Tên / mã đơn"
+                    placeholder="Mã đơn"
                   />
                 </div>
 

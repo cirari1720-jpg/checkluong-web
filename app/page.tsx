@@ -2048,6 +2048,10 @@ for (const oldOrder of oldStaffOrders) {
           staff_name:
             staffName,
 
+          
+          order_code:
+            oldOrder.order_code,
+
           order_type:
             "staff",
         }),
@@ -2302,6 +2306,10 @@ for (const oldOrder of oldPageOrders) {
 
           staff_name:
             staffName,
+
+          
+          order_code:
+            oldOrder.order_code,
 
           order_type:
             "page",
@@ -4350,4 +4358,7 @@ footer {
   }
 }
 `;
+
+
+
 

@@ -844,22 +844,25 @@ export async function DELETE(
       body.id ??
       body.order_id;
 
-    if (
+    const id =
       rawId === undefined ||
       rawId === null ||
       String(rawId).trim() === ""
-    ) {
-      return jsonError(
-        "Thiếu ID đơn cần xóa."
-      );
-    }
+        ? null
+        : Number(rawId);
 
-    const id =
-      Number(rawId);
+    const orderCode =
+      String(body.order_code ?? "").trim();
+
+    const staffName =
+      String(body.staff_name ?? "").trim();
+
+    const orderType =
+      String(body.order_type ?? "staff").trim();
 
     if (
-      !Number.isInteger(id) ||
-      id <= 0
+      id !== null &&
+      (!Number.isInteger(id) || id <= 0)
     ) {
       return jsonError(
         "ID đơn cần xóa không hợp lệ."
@@ -869,28 +872,93 @@ export async function DELETE(
     const admin =
       createAdminClient();
 
+    /*
+     * 1. Ưu tiên xóa bằng ID thật.
+     */
+    if (id !== null) {
+      const {
+        data,
+        error,
+      } = await admin
+        .from("orders")
+        .delete()
+        .eq("id", id)
+        .select()
+        .maybeSingle();
+
+      if (error) {
+        console.error(
+          "DELETE /api/orders error:",
+          error
+        );
+
+        return NextResponse.json(
+          {
+            error: error.message,
+            code: error.code,
+            details: error.details,
+            hint: error.hint,
+          },
+          {
+            status: 500,
+          }
+        );
+      }
+
+      if (data) {
+        return NextResponse.json(
+          {
+            success: true,
+            data,
+          },
+          {
+            status: 200,
+          }
+        );
+      }
+    }
+
+    /*
+     * 2. ID không còn tồn tại.
+     * Tìm lại đơn bằng:
+     * staff_name + order_code + order_type.
+     */
+    if (
+      !staffName ||
+      !orderCode ||
+      !orderType
+    ) {
+      return jsonError(
+        id !== null
+          ? `Không tìm thấy đơn có ID ${id} cần xóa và thiếu thông tin để tìm lại đơn.`
+          : "Thiếu thông tin đơn cần xóa.",
+        404
+      );
+    }
+
     const {
-      data,
-      error,
+      data: matches,
+      error: findError,
     } = await admin
       .from("orders")
-      .delete()
-      .eq("id", id)
-      .select()
-      .maybeSingle();
+      .select("id, order_code, staff_name, order_type, amount, tip")
+      .eq("staff_name", staffName)
+      .eq("order_code", orderCode)
+      .eq("order_type", orderType)
+      .limit(2);
 
-    if (error) {
+    if (findError) {
       console.error(
-        "DELETE /api/orders error:",
-        error
+        "DELETE /api/orders fallback find error:",
+        findError
       );
 
       return NextResponse.json(
         {
-          error: error.message,
-          code: error.code,
-          details: error.details,
-          hint: error.hint,
+          error: findError.message,
+          code: findError.code,
+          details: findError.details,
+          hint: findError.hint,
         },
         {
           status: 500,
@@ -898,9 +966,57 @@ export async function DELETE(
       );
     }
 
-    if (!data) {
+    if (!matches || matches.length === 0) {
       return jsonError(
-        `Không tìm thấy đơn có ID ${id} cần xóa.`,
+        id !== null
+          ? `Không tìm thấy đơn có ID ${id} và cũng không tìm thấy đơn ${orderCode} để xóa.`
+          : `Không tìm thấy đơn ${orderCode} cần xóa.`,
+        404
+      );
+    }
+
+    if (matches.length > 1) {
+      return jsonError(
+        `Có nhiều đơn ${orderCode} của ${staffName}. Không thể xác định chính xác đơn cần xóa.`,
+        409
+      );
+    }
+
+    const realId =
+      Number(matches[0].id);
+
+    const {
+      data: deletedData,
+      error: deleteError,
+    } = await admin
+      .from("orders")
+      .delete()
+      .eq("id", realId)
+      .select()
+      .maybeSingle();
+
+    if (deleteError) {
+      console.error(
+        "DELETE /api/orders fallback delete error:",
+        deleteError
+      );
+
+      return NextResponse.json(
+        {
+          error: deleteError.message,
+          code: deleteError.code,
+          details: deleteError.details,
+          hint: deleteError.hint,
+        },
+        {
+          status: 500,
+        }
+      );
+    }
+
+    if (!deletedData) {
+      return jsonError(
+        `Không thể xóa đơn ${orderCode}.`,
         404
       );
     }
@@ -908,7 +1024,7 @@ export async function DELETE(
     return NextResponse.json(
       {
         success: true,
-        data,
+        data: deletedData,
       },
       {
         status: 200,
@@ -938,3 +1054,4 @@ function order_dateIsProvided(
 ) {
   return body.order_date !== undefined;
 }
+

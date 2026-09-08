@@ -437,45 +437,54 @@ function OrderEditor({
                   {index + 1}
                 </div>
 
-                <input
-  value={order.order_code}
-  onChange={(e) =>
-    updateOrder(
-      index,
-      "order_code",
-      e.target.value
-    )
-  }
-  placeholder="Tên / mã đơn"
-/>
+                <div className="order-field">
+                  <label>Tên / Mã đơn</label>
+                  <input
+                    value={order.order_code}
+                    onChange={(e) =>
+                      updateOrder(
+                        index,
+                        "order_code",
+                        e.target.value
+                      )
+                    }
+                    placeholder="Tên / mã đơn"
+                  />
+                </div>
 
-                <input
-                  type="number"
-                  min="0"
-                  value={order.amount}
-                  onChange={(e) =>
-                    updateOrder(
-                      index,
-                      "amount",
-                      e.target.value
-                    )
-                  }
-                  placeholder="Tiền"
-                />
+                <div className="order-field">
+                  <label>Số tiền đơn (đ)</label>
+                  <input
+                    type="number"
+                    min="0"
+                    value={order.amount}
+                    onChange={(e) =>
+                      updateOrder(
+                        index,
+                        "amount",
+                        e.target.value
+                      )
+                    }
+                    placeholder="0"
+                  />
+                </div>
 
-                <input
-                  type="number"
-                  min="0"
-                  value={order.tip}
-                  onChange={(e) =>
-                    updateOrder(
-                      index,
-                      "tip",
-                      e.target.value
-                    )
-                  }
-                  placeholder="Tip"
-                />
+                <div className="order-field">
+                  <label>Tip (đ)</label>
+                  <input
+                    type="number"
+                    min="0"
+                    value={order.tip}
+                    onChange={(e) =>
+                      updateOrder(
+                        index,
+                        "tip",
+                        e.target.value
+                      )
+                    }
+                    placeholder="0"
+                  />
+                </div>
 
                 <button
                   className="danger-btn"
@@ -483,7 +492,7 @@ function OrderEditor({
                     deleteOrder(index)
                   }
                 >
-                  Xóa
+                  🗑 Xóa đơn
                 </button>
               </div>
             )

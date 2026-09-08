@@ -1397,20 +1397,6 @@ export default function OrdersPage() {
                       </td>
 
                       {/* ================================
-                          CUSTOMER
-                      ================================= */}
-
-                      <td
-                        style={
-                          tdStyle
-                        }
-                      >
-                        {
-                          order.customer_name
-                        }
-                      </td>
-
-                      {/* ================================
                           AMOUNT
                       ================================= */}
 
@@ -1431,19 +1417,9 @@ export default function OrdersPage() {
                           TIP
                       ================================= */}
 
-                      <td
-                        style={
-                          tdStyle
-                        }
-                      >
-                        {Number(
-                          order.tip
-                        ).toLocaleString(
-                          "vi-VN"
-                        )}
-                        đ
-                      </td>
-
+<td style={tdStyle}>
+  {Number(order.tip ?? 0).toLocaleString("vi-VN")}đ
+</td>
                       {/* ================================
                           NOTE
                       ================================= */}

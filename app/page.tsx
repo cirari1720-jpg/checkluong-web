@@ -302,7 +302,9 @@ function money(value: number) {
 function orderMoney(orders: Order[]) {
   return orders.reduce(
     (total, order) =>
-      total + Number(order.amount || 0),
+      total +
+      Number(order.amount || 0) +
+      Number(order.tip || 0),
     0
   );
 }
@@ -4348,3 +4350,4 @@ footer {
   }
 }
 `;
+

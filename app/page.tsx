@@ -101,6 +101,7 @@ type Order = {
   id: string;          // ID thật trong database
   order_code: string;  // mã đơn hiển thị
   amount: number;
+  tip: number;
 };
 
 /* =========================================================
@@ -348,6 +349,7 @@ function OrderEditor({
     id: `new-${Date.now()}`,
     order_code: `Đơn ${orders.length + 1}`,
     amount: 0,
+    tip: 0,
   };
 
   onChange([
@@ -523,14 +525,18 @@ function ReadonlyOrders({
                 className="readonly-item"
                 key={`${order.id}-${index}`}
               >
-                <span>
-                  {index + 1}.{" "}
-                  {order.order_code}
-                </span>
+                <div>
+                  <span>
+                    {index + 1}.{" "}
+                    {order.order_code}
+                  </span>
 
-                <b>
-                  {money(order.amount)}
-                </b>
+                  <div style={{ marginTop: 4, fontSize: 14 }}>
+                    Tiền đơn: <b>{money(order.amount)}</b>
+                    {" · "}
+                    Tip: <b>{money(order.tip)}</b>
+                  </div>
+                </div>
               </div>
             )
           )}
@@ -1257,14 +1263,10 @@ if (Array.isArray(orders)) {
 
     const normalizedOrder: Order = {
       id: String(order.id),
-      order_code: String(
-        order.order_code ?? ""
-      ),
-      amount: Number(
-        order.amount ?? 0
-      ),
+      order_code: String(order.order_code ?? ""),
+      amount: Number(order.amount ?? 0),
+      tip: Number(order.tip ?? 0),
     };
-
     /*
      * order_type = "page"
      * → đơn Trực Page

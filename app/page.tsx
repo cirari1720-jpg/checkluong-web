@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useEffect, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
@@ -1719,7 +1719,8 @@ for (const order of newStaffOrders) {
           amount:
             Number(order.amount || 0),
 
-          tip: 0,
+          tip:
+            Number(order.tip || 0),
 
           note: "",
 
@@ -1729,63 +1730,70 @@ for (const order of newStaffOrders) {
       }
     );
 
-    if (!response.ok) {
-      throw new Error(
-        "Không thể thêm đơn: " +
-          (await response.text())
-      );
+const responseText =
+  await response.text();
+
+if (!response.ok) {
+  throw new Error(
+    "Không thể cập nhật đơn: " +
+      responseText
+  );
+}
+
+let updatedOrder:
+  | {
+      id?: number | string;
+    }
+  | null = null;
+
+try {
+  updatedOrder =
+    JSON.parse(responseText);
+} catch {
+  updatedOrder = null;
+}
+
+if (
+  updatedOrder?.id != null
+) {
+  const oldId =
+    String(order.id);
+
+  const realId =
+    String(updatedOrder.id);
+
+  order.id = realId;
+
+  setDatabase((previous) => {
+    const current =
+      previous[staffName];
+
+    if (!current) {
+      return previous;
     }
 
-    const createdOrder =
-      await response.json();
+    return {
+      ...previous,
 
-    if (
-      createdOrder?.id != null
-    ) {
-      const realId =
-        String(createdOrder.id);
+      [staffName]: {
+        ...current,
 
-      /*
-       * QUAN TRỌNG:
-       * cập nhật trực tiếp object đang xử lý
-       * để những logic phía sau không còn
-       * nhìn thấy new-xxxxx.
-       */
-      order.id = realId;
-
-      /*
-       * Đồng bộ lại state React.
-       */
-      setDatabase((previous) => {
-        const current =
-          previous[staffName];
-
-        if (!current) {
-          return previous;
-        }
-
-        return {
-          ...previous,
-
-          [staffName]: {
-            ...current,
-
-            staffOrders:
-              (
-                current.staffOrders ?? []
-              ).map((item) =>
-                String(item.id) ===
-                orderId
-                  ? {
-                      ...item,
-                      id: realId,
-                    }
-                  : item
-              ),
-          },
-        };
-      });
-    }
+        staffOrders:
+          (
+            current.staffOrders ?? []
+          ).map((item) =>
+            String(item.id) ===
+            oldId
+              ? {
+                  ...item,
+                  id: realId,
+                }
+              : item
+          ),
+      },
+    };
+  });
+}
 
     /*
      * Đã POST thành công.
@@ -1802,19 +1810,17 @@ for (const order of newStaffOrders) {
    * ==========================================
    */
 
-  const numericOrderId =
-    Number(order.id);
+const numericOrderId =
+  Number(order.id);
 
-  if (
-    !Number.isInteger(
-      numericOrderId
-    ) ||
-    numericOrderId <= 0
-  ) {
-    throw new Error(
-      `ID đơn không hợp lệ: ${order.id}`
-    );
-  }
+if (
+  !Number.isInteger(numericOrderId) ||
+  numericOrderId <= 0
+) {
+  throw new Error(
+    `ID đơn không hợp lệ: ${order.id}`
+  );
+}
 
   /*
    * ==========================================
@@ -1839,24 +1845,29 @@ for (const order of newStaffOrders) {
    * ==========================================
    */
 
-  const amountChanged =
-    Number(oldOrder.amount || 0) !==
-    Number(order.amount || 0);
+const amountChanged =
+  Number(oldOrder.amount || 0) !==
+  Number(order.amount || 0);
 
-  const codeChanged =
-    String(
-      oldOrder.order_code ?? ""
-    ) !==
-    String(
-      order.order_code ?? ""
-    );
+const tipChanged =
+  Number(oldOrder.tip || 0) !==
+  Number(order.tip || 0);
 
-  if (
-    !amountChanged &&
-    !codeChanged
-  ) {
-    continue;
-  }
+const codeChanged =
+  String(
+    oldOrder.order_code ?? ""
+  ) !==
+  String(
+    order.order_code ?? ""
+  );
+
+if (
+  !amountChanged &&
+  !tipChanged &&
+  !codeChanged
+) {
+  continue;
+}
 
   /*
    * ==========================================
@@ -1876,34 +1887,102 @@ for (const order of newStaffOrders) {
         },
 
         body: JSON.stringify({
-          id: numericOrderId,
+id: numericOrderId,
 
-          order_id:
-            numericOrderId,
+order_id:
+  numericOrderId,
 
-          order_code:
-            String(order.order_code ?? "").trim() ||
-            String(oldOrder.order_code ?? "").trim(),
+old_order_code:
+  String(oldOrder.order_code ?? "").trim(),
 
-          staff_name:
-            staffName,
+order_code:
+  String(order.order_code ?? "").trim() ||
+  String(oldOrder.order_code ?? "").trim(),
 
-          amount:
-            Number(
-              order.amount || 0
-            ),
+staff_name:
+  staffName,
 
-          order_type:
-            "staff",
+amount:
+  Number(order.amount || 0),
+
+tip:
+  Number(order.tip || 0),
+
+order_type:
+  "staff",
         }),
       }
     );
 
+  const responseText =
+    await response.text();
+
   if (!response.ok) {
     throw new Error(
       "Không thể cập nhật đơn: " +
-        (await response.text())
+        responseText
     );
+  }
+
+  let updatedOrder:
+    | {
+        id?: number | string;
+      }
+    | null = null;
+
+  try {
+    updatedOrder =
+      JSON.parse(responseText);
+  } catch {
+    updatedOrder = null;
+  }
+
+  /*
+   * API có thể fallback từ ID cũ
+   * sang ID thật trong Supabase.
+   */
+  if (
+    updatedOrder?.id != null
+  ) {
+    const oldId =
+      String(order.id);
+
+    const realId =
+      String(updatedOrder.id);
+
+    if (oldId !== realId) {
+      order.id = realId;
+
+      setDatabase((previous) => {
+        const current =
+          previous[staffName];
+
+        if (!current) {
+          return previous;
+        }
+
+        return {
+          ...previous,
+
+          [staffName]: {
+            ...current,
+
+            staffOrders:
+              (
+                current.staffOrders ?? []
+              ).map((item) =>
+                String(item.id) ===
+                oldId
+                  ? {
+                      ...item,
+                      id: realId,
+                    }
+                  : item
+              ),
+          },
+        };
+      });
+    }
   }
 }
   /* ==========================================

@@ -10,6 +10,7 @@ type OrderBody = {
 
   order_date?: string;
   order_code?: string;
+  old_order_code?: string;
   staff_name?: string;
   order_type?: "staff" | "page";
   customer_name?: string;
@@ -622,15 +623,106 @@ async function updateOrder(
     const admin =
       createAdminClient();
 
-    const {
-      data,
-      error,
-    } = await admin
-      .from("orders")
-      .update(updateData)
-      .eq("id", id)
-      .select()
-      .maybeSingle();
+let {
+  data,
+  error,
+} = await admin
+  .from("orders")
+  .update(updateData)
+  .eq("id", id)
+  .select()
+  .maybeSingle();
+
+/*
+ * ======================================================
+ * FALLBACK
+ *
+ * Nếu ID cũ không còn tồn tại, tìm lại đơn bằng:
+ * - old_order_code
+ * - staff_name
+ * - order_type
+ *
+ * Không dùng fallback nếu thiếu old_order_code/staff_name.
+ * ======================================================
+ */
+if (!data && !error) {
+  const fallbackCode =
+    String(body.old_order_code ?? "").trim();
+
+  const fallbackStaff =
+    String(body.staff_name ?? "").trim();
+
+  const fallbackType =
+    body.order_type === "page"
+      ? "page"
+      : "staff";
+
+  if (
+    fallbackCode &&
+    fallbackStaff
+  ) {
+    const fallbackResult =
+      await admin
+        .from("orders")
+        .select("*")
+        .eq(
+          "staff_name",
+          fallbackStaff
+        )
+        .eq(
+          "order_code",
+          fallbackCode
+        )
+        .eq(
+          "order_type",
+          fallbackType
+        )
+        .limit(2);
+
+    if (fallbackResult.error) {
+      error =
+        fallbackResult.error;
+    } else {
+      const matches =
+        fallbackResult.data ?? [];
+
+      /*
+       * Chỉ tự động fallback khi tìm
+       * thấy DUY NHẤT 1 đơn.
+       *
+       * Nếu có nhiều đơn trùng mã,
+       * tuyệt đối không cập nhật nhầm.
+       */
+      if (matches.length === 1) {
+        const realId =
+          Number(matches[0].id);
+
+        if (
+          Number.isInteger(realId) &&
+          realId > 0
+        ) {
+          const retry =
+            await admin
+              .from("orders")
+              .update(updateData)
+              .eq("id", realId)
+              .select()
+              .maybeSingle();
+
+          data = retry.data;
+          error = retry.error;
+        }
+      } else if (
+        matches.length > 1
+      ) {
+        return jsonError(
+          `Có nhiều đơn trùng mã "${fallbackCode}" của ${fallbackStaff}, không thể xác định đúng đơn.`,
+          409
+        );
+      }
+    }
+  }
+}
 
     if (error) {
       console.error(

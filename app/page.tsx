@@ -3053,7 +3053,7 @@ const totalKpiValue =
                 </div>
               </section>
 
-              <section className="card">
+              <section className="card" style={{ display: "none" }}>
                 <div className="section-title-row">
                   <div>
                     <h2>

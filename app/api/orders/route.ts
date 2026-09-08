@@ -646,8 +646,16 @@ let {
  * ======================================================
  */
 if (!data && !error) {
-  const fallbackCode =
-    String(body.old_order_code ?? "").trim();
+  /*
+   * FALLBACK:
+   * Nếu ID cũ không còn tồn tại, thử tìm bằng:
+   * - old_order_code
+   * - order_code hiện tại
+   * - staff_name
+   * - order_type
+   *
+   * Chỉ cập nhật khi tìm thấy DUY NHẤT 1 đơn.
+   */
 
   const fallbackStaff =
     String(body.staff_name ?? "").trim();
@@ -657,74 +665,111 @@ if (!data && !error) {
       ? "page"
       : "staff";
 
-  if (
-    fallbackCode &&
-    fallbackStaff
-  ) {
-    const fallbackResult =
-      await admin
-        .from("orders")
-        .select("*")
-        .eq(
-          "staff_name",
-          fallbackStaff
-        )
-        .eq(
-          "order_code",
-          fallbackCode
-        )
-        .eq(
-          "order_type",
-          fallbackType
-        )
-        .limit(2);
+  const oldCode =
+    String(
+      body.old_order_code ?? ""
+    ).trim();
 
-    if (fallbackResult.error) {
-      error =
-        fallbackResult.error;
-    } else {
+  const currentCode =
+    String(
+      body.order_code ?? ""
+    ).trim();
+
+  const candidateCodes = [
+    oldCode,
+    currentCode,
+  ].filter(
+    (code, index, array) =>
+      code &&
+      array.indexOf(code) === index
+  );
+
+  let fallbackMatches:
+    Array<Record<string, unknown>> = [];
+
+  if (
+    fallbackStaff &&
+    fallbackType &&
+    candidateCodes.length > 0
+  ) {
+    for (
+      const code of candidateCodes
+    ) {
+      const fallbackResult =
+        await admin
+          .from("orders")
+          .select("*")
+          .eq(
+            "staff_name",
+            fallbackStaff
+          )
+          .eq(
+            "order_code",
+            code
+          )
+          .eq(
+            "order_type",
+            fallbackType
+          )
+          .limit(2);
+
+      if (fallbackResult.error) {
+        error =
+          fallbackResult.error;
+        break;
+      }
+
       const matches =
         fallbackResult.data ?? [];
 
-      /*
-       * Chỉ tự động fallback khi tìm
-       * thấy DUY NHẤT 1 đơn.
-       *
-       * Nếu có nhiều đơn trùng mã,
-       * tuyệt đối không cập nhật nhầm.
-       */
-      if (matches.length === 1) {
-        const realId =
-          Number(matches[0].id);
-
-        if (
-          Number.isInteger(realId) &&
-          realId > 0
-        ) {
-          const retry =
-            await admin
-              .from("orders")
-              .update(updateData)
-              .eq("id", realId)
-              .select()
-              .maybeSingle();
-
-          data = retry.data;
-          error = retry.error;
-        }
-      } else if (
-        matches.length > 1
-      ) {
-        return jsonError(
-          `Có nhiều đơn trùng mã "${fallbackCode}" của ${fallbackStaff}, không thể xác định đúng đơn.`,
-          409
-        );
+      if (matches.length > 0) {
+        fallbackMatches =
+          matches;
+        break;
       }
     }
   }
+
+  /*
+   * Chỉ tự động fallback khi tìm
+   * thấy DUY NHẤT 1 đơn.
+   */
+  if (
+    !error &&
+    fallbackMatches.length === 1
+  ) {
+    const realId =
+      Number(
+        fallbackMatches[0].id
+      );
+
+    if (
+      Number.isInteger(realId) &&
+      realId > 0
+    ) {
+      const retry =
+        await admin
+          .from("orders")
+          .update(updateData)
+          .eq("id", realId)
+          .select()
+          .maybeSingle();
+
+      data = retry.data;
+      error = retry.error;
+    }
+  } else if (
+    !error &&
+    fallbackMatches.length > 1
+  ) {
+    return jsonError(
+      `Có nhiều đơn trùng mã của ${fallbackStaff}, không thể xác định đúng đơn.`,
+      409
+    );
+  }
 }
 
-    if (error) {
+if (error) {
       console.error(
         "UPDATE /api/orders SUPABASE ERROR:",
         error
@@ -1054,4 +1099,5 @@ function order_dateIsProvided(
 ) {
   return body.order_date !== undefined;
 }
+
 

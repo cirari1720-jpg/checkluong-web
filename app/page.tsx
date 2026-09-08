@@ -525,7 +525,7 @@ function ReadonlyOrders({
               >
                 <span>
                   {index + 1}.{" "}
-                  {order.id}
+                  {order.order_code}
                 </span>
 
                 <b>

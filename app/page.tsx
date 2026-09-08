@@ -1,6 +1,6 @@
 ﻿"use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 
 /* =========================================================
@@ -11,7 +11,7 @@ const STAFF = [
   "Q",
   "Zak",
   "Mthien",
-  "Vẹt",
+  "V?t",
   "Ginz",
   "Mika",
   "Pi",
@@ -22,7 +22,7 @@ const STAFF = [
   "Cae",
   "Elis",
   "ED",
-  "Mỏ",
+  "M?",
   "Hàn",
   "K",
   "Kz",
@@ -35,20 +35,20 @@ const STAFF = [
   "Tèo",
   "Vi",
   "W",
-  "Zịt",
+  "Z?t",
   "Kio",
 ] as const;
 
 function getDisplayStaffName(name: string) {
-  return name === "Vẹt" ? "Vẹt Cam 🦜" : name;
+  return name === "V?t" ? "V?t Cam ??" : name;
 }
 
 /*
-  Mỏ và Tia:
-  - Vẫn là Staff
-  - Đồng thời là Trực Page
+  M? và Tia:
+  - V?n là Staff
+  - Ð?ng th?i là Tr?c Page
 */
-const PAGE_STAFF = ["Mỏ", "Tia"] as const;
+const PAGE_STAFF = ["M?", "Tia"] as const;
 
 /* =========================================================
    KPI
@@ -57,35 +57,35 @@ const PAGE_STAFF = ["Mỏ", "Tia"] as const;
 const KPI_FIELDS = [
   {
     key: "page",
-    label: "Đóng góp Page",
+    label: "Ðóng góp Page",
   },
   {
     key: "photo",
-    label: "Mảng Chụp Ảnh",
+    label: "M?ng Ch?p ?nh",
   },
   {
     key: "editPhoto",
-    label: "Mảng Edit Ảnh",
+    label: "M?ng Edit ?nh",
   },
   {
     key: "video",
-    label: "Mảng Quay Video",
+    label: "M?ng Quay Video",
   },
   {
     key: "editVideo",
-    label: "Mảng Edit Video",
+    label: "M?ng Edit Video",
   },
   {
     key: "harem",
-    label: "Mảng Harem Đi Chơi",
+    label: "M?ng Harem Ði Choi",
   },
   {
     key: "hostDan",
-    label: "Mảng Host Dàn",
+    label: "M?ng Host Dàn",
   },
   {
     key: "hostTreo",
-    label: "Mảng Host Treo",
+    label: "M?ng Host Treo",
   },
 ] as const;
 
@@ -98,8 +98,8 @@ type KpiData = Record<KpiKey, number>;
 ========================================================= */
 
 type Order = {
-  id: string;          // ID thật trong database
-  order_code: string;  // mã đơn hiển thị
+  id: string;          // ID th?t trong database
+  order_code: string;  // mã don hi?n th?
   amount: number;
   tip: number;
 };
@@ -143,27 +143,27 @@ type Account =
     };
 
 /* =========================================================
-   MÃ ĐĂNG NHẬP
+   MÃ ÐANG NH?P
 =========================================================
 
-   Mỗi người có một mã riêng.
+   M?i ngu?i có m?t mã riêng.
 
    STAFF:
    Q123       -> Q
    ZAK456     -> Zak
    MTHIEN789  -> Mthien
-   VET111     -> Vẹt
+   VET111     -> V?t
    GINZ222    -> Ginz
    ...
 
    PAGE:
-   MO333      -> Mỏ
+   MO333      -> M?
    TIA789     -> Tia
 
    ADMIN:
    ADMIN2026  -> Admin
 
-   Có thể tự đổi mã ở đây.
+   Có th? t? d?i mã ? dây.
 ========================================================= */
 
 
@@ -296,7 +296,7 @@ function normalizeDatabase(raw: any): Database {
 function money(value: number) {
   return `${new Intl.NumberFormat("vi-VN").format(
     Number(value) || 0
-  )} đ`;
+  )} d`;
 }
 
 function orderMoney(orders: Order[]) {
@@ -346,50 +346,77 @@ function OrderEditor({
   orders: Order[];
   onChange: (orders: Order[]) => void;
 }) {
+  const [draftOrders, setDraftOrders] =
+    useState<Order[]>(orders);
+
+  const isFirstRender = useRef(true);
+
+  useEffect(() => {
+    setDraftOrders(orders);
+  }, [orders]);
+
+  useEffect(() => {
+    if (isFirstRender.current) {
+      isFirstRender.current = false;
+      return;
+    }
+
+    const timer = window.setTimeout(() => {
+      onChange(draftOrders);
+    }, 600);
+
+    return () => {
+      window.clearTimeout(timer);
+    };
+  }, [draftOrders, onChange]);
+
   function addOrder() {
-  const newOrder: Order = {
-    id: `new-${Date.now()}`,
-    order_code: `Đơn ${orders.length + 1}`,
-    amount: 0,
-    tip: 0,
-  };
-
-  onChange([
-    ...orders,
-    newOrder,
-  ]);
-}
-
- function updateOrder(
-  index: number,
-  field: keyof Order,
-  value: string
-) {
-  const next = [...orders];
-
-  if (field === "amount") {
-    next[index] = {
-      ...next[index],
-      amount: Number(value) || 0,
+    const newOrder: Order = {
+      id: `new-${Date.now()}`,
+      order_code: `Đơn ${draftOrders.length + 1}`,
+      amount: 0,
+      tip: 0,
     };
+
+    const next = [
+      ...draftOrders,
+      newOrder,
+    ];
+
+    setDraftOrders(next);
+    onChange(next);
   }
 
-  if (field === "tip") {
-    next[index] = {
-      ...next[index],
-      tip: Number(value) || 0,
-    };
-  }
+  function updateOrder(
+    index: number,
+    field: keyof Order,
+    value: string
+  ) {
+    const next = [...draftOrders];
 
-  if (field === "order_code") {
-    next[index] = {
-      ...next[index],
-      order_code: value,
-    };
-  }
+    if (field === "amount") {
+      next[index] = {
+        ...next[index],
+        amount: Number(value) || 0,
+      };
+    }
 
-  onChange(next);
-}
+    if (field === "tip") {
+      next[index] = {
+        ...next[index],
+        tip: Number(value) || 0,
+      };
+    }
+
+    if (field === "order_code") {
+      next[index] = {
+        ...next[index],
+        order_code: value,
+      };
+    }
+
+    setDraftOrders(next);
+  }
 
   function deleteOrder(index: number) {
     if (
@@ -400,11 +427,12 @@ function OrderEditor({
       return;
     }
 
-    onChange(
-      orders.filter(
-        (_, i) => i !== index
-      )
+    const next = draftOrders.filter(
+      (_, i) => i !== index
     );
+
+    setDraftOrders(next);
+    onChange(next);
   }
 
   return (
@@ -415,114 +443,108 @@ function OrderEditor({
           <p>{description}</p>
         </div>
 
-        <button
-          className="primary-btn"
-          onClick={addOrder}
-        >
-          + Thêm đơn
-        </button>
+        <span className="admin-badge">
+          🔐 ADMIN
+        </span>
       </div>
 
-      {orders.length === 0 ? (
-        <div className="empty">
-          Chưa có đơn nào.
-        </div>
-      ) : (
-        <div className="orders">
-          {orders.map(
-            (order, index) => (
-              <div
-                className="order-item"
-                key={`${order.id}-${index}`}
-              >
-                <div className="order-index">
-                  {index + 1}
-                </div>
-
-                <div className="order-field">
-                  <label>Mã đơn</label>
-                  <input
-                    value={order.order_code}
-                    onChange={(e) =>
-                      updateOrder(
-                        index,
-                        "order_code",
-                        e.target.value
-                      )
-                    }
-                    placeholder="Mã đơn"
-                  />
-                </div>
-
-                <div className="order-field">
-                  <label>Số tiền đơn (đ)</label>
-                  <input
-                    type="number"
-                    min="0"
-                    value={order.amount}
-                    onChange={(e) =>
-                      updateOrder(
-                        index,
-                        "amount",
-                        e.target.value
-                      )
-                    }
-                    placeholder="0"
-                  />
-                </div>
-
-                <div className="order-field">
-                  <label>Tip (đ)</label>
-                  <input
-                    type="number"
-                    min="0"
-                    value={order.tip}
-                    onChange={(e) =>
-                      updateOrder(
-                        index,
-                        "tip",
-                        e.target.value
-                      )
-                    }
-                    placeholder="0"
-                  />
-                </div>
-
-                <button
-                  className="danger-btn"
-                  onClick={() =>
-                    deleteOrder(index)
-                  }
-                >
-                  🗑 Xóa đơn
-                </button>
+      <div className="order-list">
+        {draftOrders.map(
+          (order, index) => (
+            <div
+              className="order-row"
+              key={order.id}
+            >
+              <div className="order-number">
+                {index + 1}
               </div>
-            )
-          )}
-        </div>
-      )}
+
+              <div className="order-field">
+                <label>Mã đơn</label>
+
+                <input
+                  type="text"
+                  value={order.order_code}
+                  onChange={(e) =>
+                    updateOrder(
+                      index,
+                      "order_code",
+                      e.target.value
+                    )
+                  }
+                />
+              </div>
+
+              <div className="order-field">
+                <label>Tiền đơn</label>
+
+                <input
+                  type="number"
+                  value={order.amount}
+                  onChange={(e) =>
+                    updateOrder(
+                      index,
+                      "amount",
+                      e.target.value
+                    )
+                  }
+                />
+              </div>
+
+              <div className="order-field">
+                <label>Tip</label>
+
+                <input
+                  type="number"
+                  value={order.tip}
+                  onChange={(e) =>
+                    updateOrder(
+                      index,
+                      "tip",
+                      e.target.value
+                    )
+                  }
+                />
+              </div>
+
+              <button
+                type="button"
+                className="danger-button"
+                onClick={() =>
+                  deleteOrder(index)
+                }
+              >
+                Xóa
+              </button>
+            </div>
+          )
+        )}
+      </div>
+
+      <button
+        type="button"
+        className="add-button"
+        onClick={addOrder}
+      >
+        + Thêm đơn
+      </button>
 
       <div className="total-bar">
         <span>
           Tổng số:{" "}
-          <b>{orders.length}</b>
+          <b>{draftOrders.length}</b>
         </span>
 
         <span>
           Tổng tiền:{" "}
           <b>
-            {money(orderMoney(orders))}
+            {money(orderMoney(draftOrders))}
           </b>
         </span>
       </div>
     </section>
   );
 }
-
-/* =========================================================
-   READONLY ORDER
-========================================================= */
-
 function ReadonlyOrders({
   title,
   description,
@@ -541,13 +563,13 @@ function ReadonlyOrders({
         </div>
 
         <span className="readonly">
-          🔒 CHỈ XEM
+          ?? CH? XEM
         </span>
       </div>
 
       {orders.length === 0 ? (
         <div className="empty">
-          Chưa có đơn nào.
+          Chua có don nào.
         </div>
       ) : (
         <div className="readonly-list">
@@ -564,7 +586,7 @@ function ReadonlyOrders({
                   </span>
 
                   <div style={{ marginTop: 4, fontSize: 14 }}>
-                    Tiền đơn: <b>{money(order.amount)}</b>
+                    Ti?n don: <b>{money(order.amount)}</b>
                     {" · "}
                     Tip: <b>{money(order.tip)}</b>
                   </div>
@@ -577,12 +599,12 @@ function ReadonlyOrders({
 
       <div className="total-bar">
         <span>
-          Tổng số:{" "}
+          T?ng s?:{" "}
           <b>{orders.length}</b>
         </span>
 
         <span>
-          Tổng tiền:{" "}
+          T?ng ti?n:{" "}
           <b>
             {money(orderMoney(orders))}
           </b>
@@ -626,14 +648,14 @@ function KpiEditor({
     <section className="card">
       <div className="section-title-row">
         <div>
-          <h2>Điểm KPI</h2>
+          <h2>Ði?m KPI</h2>
           <p>
-            Admin được quyền cập nhật điểm.
+            Admin du?c quy?n c?p nh?t di?m.
           </p>
         </div>
 
         <span className="admin-badge">
-          🔐 ADMIN
+          ?? ADMIN
         </span>
       </div>
 
@@ -662,7 +684,7 @@ function KpiEditor({
       </div>
 
       <div className="highlight">
-        <span>TỔNG ĐIỂM KPI</span>
+        <span>T?NG ÐI?M KPI</span>
 
         <strong>
           {pageOnly
@@ -696,14 +718,14 @@ function ReadonlyKpi({
     <section className="card">
       <div className="section-title-row">
         <div>
-          <h2>Điểm KPI</h2>
+          <h2>Ði?m KPI</h2>
           <p>
-            Bạn chỉ có quyền xem.
+            B?n ch? có quy?n xem.
           </p>
         </div>
 
         <span className="readonly">
-          🔒 CHỈ XEM
+          ?? CH? XEM
         </span>
       </div>
 
@@ -723,7 +745,7 @@ function ReadonlyKpi({
       </div>
 
       <div className="highlight">
-        <span>TỔNG ĐIỂM KPI</span>
+        <span>T?NG ÐI?M KPI</span>
 
         <strong>
           {pageOnly
@@ -756,16 +778,16 @@ function ReadonlyPenalty({
     <section className="card">
       <div className="section-title-row">
         <div>
-          <h2>Phạt</h2>
+          <h2>Ph?t</h2>
           <p>
-            Thông tin các khoản phạt.
+            Thông tin các kho?n ph?t.
           </p>
         </div>
       </div>
 
       {penalties.length === 0 ? (
         <div className="empty">
-          Chưa có khoản phạt.
+          Chua có kho?n ph?t.
         </div>
       ) : (
         <div className="penalties">
@@ -780,7 +802,7 @@ function ReadonlyPenalty({
                 </div>
 
                 <div>
-                  <label>Lỗi phạt</label>
+                  <label>L?i ph?t</label>
 
                   <div className="readonly-field">
                     {penalty.error || "—"}
@@ -788,7 +810,7 @@ function ReadonlyPenalty({
                 </div>
 
                 <div>
-                  <label>Mức phạt</label>
+                  <label>M?c ph?t</label>
 
                   <div className="readonly-field">
                     {money(
@@ -801,7 +823,7 @@ function ReadonlyPenalty({
 
                 <div>
                   <label>
-                    Hình thức phạt
+                    Hình th?c ph?t
                   </label>
 
                   <div className="readonly-field">
@@ -816,12 +838,12 @@ function ReadonlyPenalty({
 
       <div className="total-bar">
         <span>
-          Số lỗi:{" "}
+          S? l?i:{" "}
           <b>{penalties.length}</b>
         </span>
 
         <span>
-          Tổng phạt:{" "}
+          T?ng ph?t:{" "}
           <b>{money(penaltyTotal)}</b>
         </span>
       </div>
@@ -866,9 +888,9 @@ function PenaltyEditor({
     setDraftPenalties(next);
 
     /*
-     * Chỉ cập nhật giao diện ngay.
-     * Không cần API lưu vì khoản phạt
-     * chưa có nội dung lỗi.
+     * Ch? c?p nh?t giao di?n ngay.
+     * Không c?n API luu vì kho?n ph?t
+     * chua có n?i dung l?i.
      */
     onChange(next);
   }
@@ -897,8 +919,8 @@ function PenaltyEditor({
 
   function savePenalty() {
     /*
-     * Chỉ gửi dữ liệu lên parent khi
-     * người dùng đã nhập xong và rời ô.
+     * Ch? g?i d? li?u lên parent khi
+     * ngu?i dùng dã nh?p xong và r?i ô.
      */
     onChange(
       draftPenalties.map((penalty) => ({
@@ -918,7 +940,7 @@ function PenaltyEditor({
   ) {
     if (
       !window.confirm(
-        "Xóa khoản phạt này?"
+        "Xóa kho?n ph?t này?"
       )
     ) {
       return;
@@ -945,11 +967,11 @@ function PenaltyEditor({
     <section className="card">
       <div className="section-title-row">
         <div>
-          <h2>Phạt</h2>
+          <h2>Ph?t</h2>
 
           <p>
-            Admin cập nhật lỗi, mức phạt
-            và hình thức phạt.
+            Admin c?p nh?t l?i, m?c ph?t
+            và hình th?c ph?t.
           </p>
         </div>
 
@@ -958,13 +980,13 @@ function PenaltyEditor({
           className="primary-btn"
           onClick={addPenalty}
         >
-          + Thêm phạt
+          + Thêm ph?t
         </button>
       </div>
 
       {draftPenalties.length === 0 ? (
         <div className="empty">
-          Chưa có khoản phạt.
+          Chua có kho?n ph?t.
         </div>
       ) : (
         <div className="penalties">
@@ -980,7 +1002,7 @@ function PenaltyEditor({
 
                 <div>
                   <label>
-                    Lỗi phạt
+                    L?i ph?t
                   </label>
 
                   <input
@@ -993,13 +1015,13 @@ function PenaltyEditor({
                       )
                     }
                     onBlur={savePenalty}
-                    placeholder="Ví dụ: Đi trễ"
+                    placeholder="Ví d?: Ði tr?"
                   />
                 </div>
 
                 <div>
                   <label>
-                    Mức phạt
+                    M?c ph?t
                   </label>
 
                   <input
@@ -1019,7 +1041,7 @@ function PenaltyEditor({
 
                 <div>
                   <label>
-                    Hình thức phạt
+                    Hình th?c ph?t
                   </label>
 
                   <input
@@ -1032,7 +1054,7 @@ function PenaltyEditor({
                       )
                     }
                     onBlur={savePenalty}
-                    placeholder="Ví dụ: Trừ lương"
+                    placeholder="Ví d?: Tr? luong"
                   />
                 </div>
 
@@ -1053,14 +1075,14 @@ function PenaltyEditor({
 
       <div className="total-bar">
         <span>
-          Số lỗi:{" "}
+          S? l?i:{" "}
           <b>
             {draftPenalties.length}
           </b>
         </span>
 
         <span>
-          Tổng phạt:{" "}
+          T?ng ph?t:{" "}
           <b>
             {money(penaltyTotal)}
           </b>
@@ -1194,21 +1216,21 @@ export default function Home() {
 
       if (!ordersResponse.ok) {
         console.error(
-          "Không thể tải đơn:",
+          "Không th? t?i don:",
           await ordersResponse.text()
         );
       }
 
       if (!kpiResponse.ok) {
         console.error(
-          "Không thể tải KPI:",
+          "Không th? t?i KPI:",
           await kpiResponse.text()
         );
       }
 
       if (!penaltiesResponse.ok) {
         console.error(
-          "Không thể tải phạt:",
+          "Không th? t?i ph?t:",
           await penaltiesResponse.text()
         );
       }
@@ -1267,8 +1289,8 @@ if (Array.isArray(penaltiesData)) {
 
 /* ==================================================
    LOAD ORDERS VÀO DATABASE
-   id       = ID thật trong bảng orders
-   order_code = mã đơn hiển thị
+   id       = ID th?t trong b?ng orders
+   order_code = mã don hi?n th?
 ================================================== */
 
 if (Array.isArray(orders)) {
@@ -1287,7 +1309,7 @@ if (Array.isArray(orders)) {
 
     if (!personName) {
       console.warn(
-        "Không tìm thấy staff:",
+        "Không tìm th?y staff:",
         staffName
       );
       continue;
@@ -1301,10 +1323,10 @@ if (Array.isArray(orders)) {
     };
     /*
      * order_type = "page"
-     * → đơn Trực Page
+     * ? don Tr?c Page
      *
-     * Còn lại
-     * → đơn Staff
+     * Còn l?i
+     * ? don Staff
      */
     if (
       String(order.order_type ?? "").toLowerCase() ===
@@ -1345,7 +1367,7 @@ if (Array.isArray(kpiData)) {
 
     if (!personName) {
       console.warn(
-        "Không tìm thấy staff KPI:",
+        "Không tìm th?y staff KPI:",
         staffName
       );
       continue;
@@ -1389,7 +1411,7 @@ if (Array.isArray(penaltiesData)) {
 
     if (!personName) {
       console.warn(
-        "Không tìm thấy staff phạt:",
+        "Không tìm th?y staff ph?t:",
         staffName
       );
       continue;
@@ -1459,7 +1481,7 @@ setLoaded(true);
       setLoaded(true);
     } catch (error) {
       console.error(
-        "Không thể tải dữ liệu:",
+        "Không th? t?i d? li?u:",
         error
       );
 
@@ -1517,7 +1539,7 @@ return () => {
     const code = loginCode.trim().toUpperCase();
 
     if (!code) {
-      alert("Vui lòng nhập mã đăng nhập.");
+      alert("Vui lòng nh?p mã dang nh?p.");
       return;
     }
 
@@ -1536,7 +1558,7 @@ return () => {
 
       if (!response.ok || !result?.success || !result?.user) {
         console.error("Login error:", result);
-        alert(result?.error || "Mã đăng nhập không hợp lệ.");
+        alert(result?.error || "Mã dang nh?p không h?p l?.");
         return;
       }
 
@@ -1556,7 +1578,7 @@ return () => {
       }
     } catch (error) {
       console.error("Login error:", error);
-      alert("Có lỗi xảy ra khi đăng nhập.");
+      alert("Có l?i x?y ra khi dang nh?p.");
     }
   }
   /* =======================================================
@@ -1610,7 +1632,7 @@ async function logout() {
   ];
 
 /* =======================================================
-   UPDATE PERSON — ADMIN → SUPABASE
+   UPDATE PERSON — ADMIN ? SUPABASE
 ======================================================= */
 
 async function updatePerson(
@@ -1631,7 +1653,7 @@ async function updatePerson(
   );
 
   /* ==========================================
-     1. CẬP NHẬT UI NGAY
+     1. C?P NH?T UI NGAY
   ========================================== */
 
   setDatabase((previous) => ({
@@ -1651,11 +1673,11 @@ async function updatePerson(
       updatedPerson.staffOrders ?? [];
 
     /*
-     * Đồng bộ từng order với API.
+     * Ð?ng b? t?ng order v?i API.
      *
-     * API /api/orders cần hỗ trợ:
-     * POST = tạo
-     * PUT = cập nhật
+     * API /api/orders c?n h? tr?:
+     * POST = t?o
+     * PUT = c?p nh?t
      * DELETE = xóa
      */
 
@@ -1674,7 +1696,7 @@ async function updatePerson(
     );
 
  /* ==========================================
-   2A. TẠO / CẬP NHẬT ĐƠN STAFF
+   2A. T?O / C?P NH?T ÐON STAFF
 ========================================== */
 
 for (const order of newStaffOrders) {
@@ -1683,12 +1705,12 @@ for (const order of newStaffOrders) {
 
   /*
    * ==========================================
-   * ID TẠM
+   * ID T?M
    *
-   * new-xxxxx chỉ tồn tại trên giao diện.
-   * Tuyệt đối không PUT.
+   * new-xxxxx ch? t?n t?i trên giao di?n.
+   * Tuy?t d?i không PUT.
    *
-   * Luôn POST để tạo đơn thật trên Supabase.
+   * Luôn POST d? t?o don th?t trên Supabase.
    * ==========================================
    */
 
@@ -1737,7 +1759,7 @@ const responseText =
 
 if (!response.ok) {
   throw new Error(
-    "Không thể cập nhật đơn: " +
+    "Không th? c?p nh?t don: " +
       responseText
   );
 }
@@ -1798,15 +1820,15 @@ if (
 }
 
     /*
-     * Đã POST thành công.
-     * Không được chạy xuống PUT.
+     * Ðã POST thành công.
+     * Không du?c ch?y xu?ng PUT.
      */
     continue;
   }
 
   /*
    * ==========================================
-   * ID KHÔNG PHẢI ID SỐ
+   * ID KHÔNG PH?I ID S?
    *
    * Không cho phép PUT.
    * ==========================================
@@ -1820,13 +1842,13 @@ if (
   numericOrderId <= 0
 ) {
   throw new Error(
-    `ID đơn không hợp lệ: ${order.id}`
+    `ID don không h?p l?: ${order.id}`
   );
 }
 
   /*
    * ==========================================
-   * TÌM ĐƠN CŨ
+   * TÌM ÐON CU
    * ==========================================
    */
 
@@ -1834,8 +1856,8 @@ if (
     oldStaffMap.get(order.id);
 
   /*
-   * Không tồn tại đơn cũ thì bỏ qua.
-   * Đơn mới phải đi bằng POST ở phía trên.
+   * Không t?n t?i don cu thì b? qua.
+   * Ðon m?i ph?i di b?ng POST ? phía trên.
    */
   if (!oldOrder) {
     continue;
@@ -1843,7 +1865,7 @@ if (
 
   /*
    * ==========================================
-   * KIỂM TRA THAY ĐỔI
+   * KI?M TRA THAY Ð?I
    * ==========================================
    */
 
@@ -1873,7 +1895,7 @@ if (
 
   /*
    * ==========================================
-   * UPDATE ĐƠN CŨ
+   * UPDATE ÐON CU
    * ==========================================
    */
 
@@ -1921,7 +1943,7 @@ order_type:
 
   if (!response.ok) {
     throw new Error(
-      "Không thể cập nhật đơn: " +
+      "Không th? c?p nh?t don: " +
         responseText
     );
   }
@@ -1940,8 +1962,8 @@ order_type:
   }
 
   /*
-   * API có thể fallback từ ID cũ
-   * sang ID thật trong Supabase.
+   * API có th? fallback t? ID cu
+   * sang ID th?t trong Supabase.
    */
   if (
     updatedOrder?.id != null
@@ -1988,7 +2010,7 @@ order_type:
   }
 }
   /* ==========================================
-   2B. XÓA ĐƠN STAFF
+   2B. XÓA ÐON STAFF
 ========================================== */
 
 for (const oldOrder of oldStaffOrders) {
@@ -1996,7 +2018,7 @@ for (const oldOrder of oldStaffOrders) {
     String(oldOrder.id ?? "").trim();
 
   /*
-   * ID tạm không tồn tại trong Supabase.
+   * ID t?m không t?n t?i trong Supabase.
    */
   if (
     oldOrderId.startsWith("new-")
@@ -2005,7 +2027,7 @@ for (const oldOrder of oldStaffOrders) {
   }
 
   /*
-   * Nếu đơn cũ vẫn còn thì không xóa.
+   * N?u don cu v?n còn thì không xóa.
    */
   if (
     newStaffMap.has(oldOrder.id)
@@ -2017,7 +2039,7 @@ for (const oldOrder of oldStaffOrders) {
     Number(oldOrder.id);
 
   /*
-   * Không bao giờ DELETE với ID rác.
+   * Không bao gi? DELETE v?i ID rác.
    */
   if (
     !Number.isInteger(
@@ -2060,14 +2082,14 @@ for (const oldOrder of oldStaffOrders) {
 
   if (!response.ok) {
     throw new Error(
-      "Không thể xóa đơn: " +
+      "Không th? xóa don: " +
         (await response.text())
     );
   }
 }
 
     /* ==========================================
-       3. ORDERS — TRỰC PAGE
+       3. ORDERS — TR?C PAGE
     ========================================== */
 
     const oldPageOrders =
@@ -2091,14 +2113,14 @@ for (const oldOrder of oldStaffOrders) {
     );
 
     /* ==========================================
-       3A. TẠO / CẬP NHẬT ĐƠN TRỰC
+       3A. T?O / C?P NH?T ÐON TR?C
     ========================================== */
 
     for (const order of newPageOrders) {
       const oldOrder =
         oldPageMap.get(order.id);
 
-      /* Đơn trực mới */
+      /* Ðon tr?c m?i */
       if (!oldOrder) {
         const response = await fetch(
           "/api/orders",
@@ -2136,7 +2158,7 @@ for (const oldOrder of oldStaffOrders) {
 
 if (!response.ok) {
   throw new Error(
-    "Không thể thêm đơn trực: " +
+    "Không th? thêm don tr?c: " +
       (await response.text())
   );
 }
@@ -2176,7 +2198,7 @@ continue;
 
       }
 
-   /* Đơn trực bị sửa */
+   /* Ðon tr?c b? s?a */
 if (
   Number(oldOrder.amount || 0) !==
     Number(order.amount || 0) ||
@@ -2187,7 +2209,7 @@ if (
     String(order.id ?? "").trim();
 
   /*
-   * ID tạm không được PUT.
+   * ID t?m không du?c PUT.
    */
   if (
     orderId.startsWith("new-")
@@ -2205,7 +2227,7 @@ if (
     numericOrderId <= 0
   ) {
     throw new Error(
-      `ID đơn trực không hợp lệ: ${order.id}`
+      `ID don tr?c không h?p l?: ${order.id}`
     );
   }
 
@@ -2245,7 +2267,7 @@ if (
 
   if (!response.ok) {
     throw new Error(
-      "Không thể cập nhật đơn trực: " +
+      "Không th? c?p nh?t don tr?c: " +
         (await response.text())
     );
   }
@@ -2253,7 +2275,7 @@ if (
 }
 
     /* ==========================================
-   3B. XÓA ĐƠN TRỰC
+   3B. XÓA ÐON TR?C
 ========================================== */
 
 for (const oldOrder of oldPageOrders) {
@@ -2261,7 +2283,7 @@ for (const oldOrder of oldPageOrders) {
     String(oldOrder.id ?? "").trim();
 
   /*
-   * Đơn tạm chưa có trong Supabase.
+   * Ðon t?m chua có trong Supabase.
    */
   if (
     oldOrderId.startsWith("new-")
@@ -2319,7 +2341,7 @@ for (const oldOrder of oldPageOrders) {
 
   if (!response.ok) {
     throw new Error(
-      "Không thể xóa đơn trực: " +
+      "Không th? xóa don tr?c: " +
         (await response.text())
     );
   }
@@ -2389,7 +2411,7 @@ for (const oldOrder of oldPageOrders) {
 
       if (!response.ok) {
         throw new Error(
-          "Lưu KPI thất bại: " +
+          "Luu KPI th?t b?i: " +
             (await response.text())
         );
       }
@@ -2406,8 +2428,8 @@ const newPenalties =
   updatedPerson.penalties ?? [];
 
 /*
- * ID dạng số = ID thật trong Supabase.
- * ID có dấu "-" = ID tạm tạo trên giao diện.
+ * ID d?ng s? = ID th?t trong Supabase.
+ * ID có d?u "-" = ID t?m t?o trên giao di?n.
  */
 function isRealPenaltyId(id: unknown) {
   return /^\d+$/.test(
@@ -2416,7 +2438,7 @@ function isRealPenaltyId(id: unknown) {
 }
 
 /* ==========================================
-   5A. THÊM / SỬA PHẠT
+   5A. THÊM / S?A PH?T
 ========================================== */
 
 for (const penalty of newPenalties) {
@@ -2435,15 +2457,15 @@ for (const penalty of newPenalties) {
 
   /*
    * ========================================
-   * PHẠT MỚI
+   * PH?T M?I
    *
-   * Nếu ID là ID tạm hoặc chưa tồn tại
-   * trong danh sách cũ → POST.
+   * N?u ID là ID t?m ho?c chua t?n t?i
+   * trong danh sách cu ? POST.
    * ========================================
    */
   if (!oldPenalty || !hasRealId) {
     /*
-     * Chưa nhập lỗi thì chưa lưu.
+     * Chua nh?p l?i thì chua luu.
      */
     if (!penalty.error?.trim()) {
       continue;
@@ -2479,7 +2501,7 @@ for (const penalty of newPenalties) {
 
     if (!response.ok) {
       throw new Error(
-        "Không thể thêm phạt: " +
+        "Không th? thêm ph?t: " +
           responseText
       );
     }
@@ -2499,10 +2521,10 @@ for (const penalty of newPenalties) {
 
     /*
      * ======================================
-     * API đã tạo thành công.
+     * API dã t?o thành công.
      *
-     * Lấy ID thật của Supabase và thay
-     * ID tạm trong database local.
+     * L?y ID th?t c?a Supabase và thay
+     * ID t?m trong database local.
      * ======================================
      */
     if (
@@ -2513,15 +2535,15 @@ for (const penalty of newPenalties) {
       );
 
       /*
-       * Cập nhật ID thật vào object
-       * đang xử lý.
+       * C?p nh?t ID th?t vào object
+       * dang x? lý.
        */
       penalty.id = realId;
 
       /*
-       * QUAN TRỌNG:
-       * database trước đó đã lưu ID tạm.
-       * Phải thay ID tạm bằng ID thật.
+       * QUAN TR?NG:
+       * database tru?c dó dã luu ID t?m.
+       * Ph?i thay ID t?m b?ng ID th?t.
        */
       setDatabase((previous) => {
         const current =
@@ -2559,7 +2581,7 @@ for (const penalty of newPenalties) {
 
   /*
    * ========================================
-   * PHẠT CŨ BỊ SỬA
+   * PH?T CU B? S?A
    * ========================================
    */
 
@@ -2567,8 +2589,8 @@ for (const penalty of newPenalties) {
     Number(oldPenalty.id);
 
   /*
-   * Phòng trường hợp dữ liệu cũ
-   * không hợp lệ.
+   * Phòng tru?ng h?p d? li?u cu
+   * không h?p l?.
    */
   if (
     !Number.isInteger(numericId) ||
@@ -2594,8 +2616,8 @@ for (const penalty of newPenalties) {
   }
 
   /*
-   * Không cho lưu khoản phạt
-   * không có nội dung lỗi.
+   * Không cho luu kho?n ph?t
+   * không có n?i dung l?i.
    */
   if (!penalty.error?.trim()) {
     continue;
@@ -2631,14 +2653,14 @@ for (const penalty of newPenalties) {
 
   if (!response.ok) {
     throw new Error(
-      "Không thể cập nhật phạt: " +
+      "Không th? c?p nh?t ph?t: " +
         responseText
     );
   }
 }
 
 /* ==========================================
-   5B. XÓA PHẠT
+   5B. XÓA PH?T
 ========================================== */
 
 for (const oldPenalty of oldPenalties) {
@@ -2646,8 +2668,8 @@ for (const oldPenalty of oldPenalties) {
     String(oldPenalty.id ?? "");
 
   /*
-   * Khoản phạt vẫn còn trên giao diện
-   * → không xóa.
+   * Kho?n ph?t v?n còn trên giao di?n
+   * ? không xóa.
    */
   const stillExists =
     newPenalties.some(
@@ -2661,8 +2683,8 @@ for (const oldPenalty of oldPenalties) {
   }
 
   /*
-   * ID tạm không thuộc database
-   * → không DELETE.
+   * ID t?m không thu?c database
+   * ? không DELETE.
    */
   if (!isRealPenaltyId(oldId)) {
     continue;
@@ -2697,14 +2719,14 @@ for (const oldPenalty of oldPenalties) {
 
   if (!response.ok) {
     throw new Error(
-      "Không thể xóa phạt: " +
+      "Không th? xóa ph?t: " +
         responseText
     );
   }
 }
 
     /* ==========================================
-       6. HOÀN TẤT
+       6. HOÀN T?T
     ========================================== */
 
     console.log(
@@ -2740,7 +2762,7 @@ for (const oldPenalty of oldPenalties) {
     alert(
       error instanceof Error
         ? error.message
-        : "Không thể lưu dữ liệu lên Supabase."
+        : "Không th? luu d? li?u lên Supabase."
     );
   }
 }
@@ -2773,20 +2795,20 @@ const totalKpiValue =
         <main className="login-page">
           <div className="login-card">
             <div className="login-logo">
-              <img src="/bao-den.png" alt="Báo đen" />
+              <img src="/bao-den.png" alt="Báo den" />
             </div>
 
             <h1>
-              TRA CỨU THÔNG TIN
+              TRA C?U THÔNG TIN
             </h1>
 
             <p className="login-subtitle">
-              Staff / Trực Page
+              Staff / Tr?c Page
             </p>
 
             <div className="login-field">
               <label>
-                Mã truy cập
+                Mã truy c?p
               </label>
 
               <input
@@ -2804,7 +2826,7 @@ const totalKpiValue =
                     login();
                   }
                 }}
-                placeholder="Nhập mã truy cập"
+                placeholder="Nh?p mã truy c?p"
               />
             </div>
 
@@ -2812,12 +2834,12 @@ const totalKpiValue =
               className="login-btn"
               onClick={login}
             >
-              TRA CỨU
+              TRA C?U
             </button>
 
             <p className="login-help">
-              Nhập mã truy cập được cấp
-              để xem thông tin.
+              Nh?p mã truy c?p du?c c?p
+              d? xem thông tin.
             </p>
           </div>
         </main>
@@ -2848,30 +2870,30 @@ const totalKpiValue =
     alt="Wolf"
     className="brand-logo"
   />
-  <span className="brand-text">TRA CỨU THÔNG TIN</span>
+  <span className="brand-text">TRA C?U THÔNG TIN</span>
 </div>
 
               <h1>
                 {isAdmin
-                  ? "Quản trị dữ liệu"
+                  ? "Qu?n tr? d? li?u"
                   : `Xin chào, ${getDisplayStaffName(currentUser.name)}`}
               </h1>
 
               <p>
                 {isAdmin
-                  ? "Admin có quyền chỉnh sửa dữ liệu"
-                  : "Chế độ chỉ xem - không thể chỉnh sửa"}
+                  ? "Admin có quy?n ch?nh s?a d? li?u"
+                  : "Ch? d? ch? xem - không th? ch?nh s?a"}
               </p>
             </div>
 
             <div className="header-actions">
               {isAdmin ? (
                 <span className="admin-badge">
-                  🔐 ADMIN
+                  ?? ADMIN
                 </span>
               ) : (
                 <span className="readonly">
-                  🔒 CHỈ XEM
+                  ?? CH? XEM
                 </span>
               )}
 
@@ -2879,7 +2901,7 @@ const totalKpiValue =
                 className="logout"
                 onClick={logout}
               >
-                Đăng xuất
+                Ðang xu?t
               </button>
             </div>
           </header>
@@ -2890,7 +2912,7 @@ const totalKpiValue =
             <section className="admin-panel">
               <div>
                 <label>
-                  Chọn người cần quản lý
+                  Ch?n ngu?i c?n qu?n lý
                 </label>
 
                 <select
@@ -2912,7 +2934,7 @@ const totalKpiValue =
                       >
                         {getDisplayStaffName(name)}
                         {isPageStaff(name)
-                          ? " — Staff + Trực"
+                          ? " — Staff + Tr?c"
                           : ""}
                       </option>
                     )
@@ -2927,14 +2949,14 @@ const totalKpiValue =
           <section className="profile">
             <div>
               <span className="profile-label">
-                Đang tra cứu
+                Ðang tra c?u
               </span>
 
               <h2>{getDisplayStaffName(viewingName)}</h2>
 
               <p>
                 {pagePerson
-                  ? "Staff + Trực Page"
+                  ? "Staff + Tr?c Page"
                   : "Staff"}
               </p>
             </div>
@@ -2950,7 +2972,7 @@ const totalKpiValue =
 
           <section className="stats">
             <StatCard
-              title="Đơn đã đi"
+              title="Ðon dã di"
               value={
                 staffOrders.length
               }
@@ -2959,8 +2981,8 @@ const totalKpiValue =
             <StatCard
               title={
                 pagePerson
-                  ? "Đơn đã trực"
-                  : "Tổng đơn"
+                  ? "Ðon dã tr?c"
+                  : "T?ng don"
               }
               value={
                 pagePerson
@@ -2970,12 +2992,12 @@ const totalKpiValue =
             />
 
             <StatCard
-              title="Tổng KPI"
+              title="T?ng KPI"
               value={totalKpiValue}
             />
 
             <StatCard
-              title="Tổng phạt"
+              title="T?ng ph?t"
               value={money(
                 totalPenaltyMoney
               )}
@@ -2987,7 +3009,7 @@ const totalKpiValue =
           {pagePerson && (
             <section className="page-summary">
               <div>
-                <span>Đơn đã đi</span>
+                <span>Ðon dã di</span>
 
                 <strong>
                   {staffOrders.length}
@@ -2995,7 +3017,7 @@ const totalKpiValue =
               </div>
 
               <div>
-                <span>Đơn đã trực</span>
+                <span>Ðon dã tr?c</span>
 
                 <strong>
                   {pageOrders.length}
@@ -3004,7 +3026,7 @@ const totalKpiValue =
 
               <div>
                 <span>
-                  Tổng tất cả đơn
+                  T?ng t?t c? don
                 </span>
 
                 <strong>
@@ -3013,7 +3035,7 @@ const totalKpiValue =
               </div>
 
               <div>
-                <span>Tổng tiền</span>
+                <span>T?ng ti?n</span>
 
                 <strong>
                   {money(
@@ -3039,7 +3061,7 @@ const totalKpiValue =
                 )
               }
             >
-              Tổng quan
+              T?ng quan
             </button>
 
             <button
@@ -3054,7 +3076,7 @@ const totalKpiValue =
                 )
               }
             >
-              Đơn đã đi
+              Ðon dã di
             </button>
 
             <button
@@ -3082,7 +3104,7 @@ const totalKpiValue =
                 )
               }
             >
-              Phạt
+              Ph?t
             </button>
           </nav>
 
@@ -3095,22 +3117,22 @@ const totalKpiValue =
               <section className="card">
                 <div className="section-title-row">
                   <div>
-                    <h2>Tổng quan</h2>
+                    <h2>T?ng quan</h2>
 
                     <p>
                       {isAdmin
-                        ? "Bạn đang quản lý dữ liệu của staff này."
-                        : "Thông tin cá nhân của bạn."}
+                        ? "B?n dang qu?n lý d? li?u c?a staff này."
+                        : "Thông tin cá nhân c?a b?n."}
                     </p>
                   </div>
 
                   {isAdmin ? (
                     <span className="admin-badge">
-                      🔐 ADMIN
+                      ?? ADMIN
                     </span>
                   ) : (
                     <span className="readonly">
-                      🔒 CHỈ XEM
+                      ?? CH? XEM
                     </span>
                   )}
                 </div>
@@ -3118,7 +3140,7 @@ const totalKpiValue =
                 <div className="overview-grid">
                   <div>
                     <span>
-                      Đơn đã đi
+                      Ðon dã di
                     </span>
 
                     <strong>
@@ -3129,7 +3151,7 @@ const totalKpiValue =
                   {pagePerson && (
                     <div>
                       <span>
-                        Đơn đã trực
+                        Ðon dã tr?c
                       </span>
 
                       <strong>
@@ -3140,7 +3162,7 @@ const totalKpiValue =
 
                   <div>
                     <span>
-                      Tổng tiền đơn
+                      T?ng ti?n don
                     </span>
 
                     <strong>
@@ -3152,7 +3174,7 @@ const totalKpiValue =
 
                   <div>
                     <span>
-                      Tổng KPI
+                      T?ng KPI
                     </span>
 
                     <strong>
@@ -3162,7 +3184,7 @@ const totalKpiValue =
 
                   <div>
                     <span>
-                      Tổng phạt
+                      T?ng ph?t
                     </span>
 
                     <strong className="red">
@@ -3178,7 +3200,7 @@ const totalKpiValue =
                 <div className="section-title-row">
                   <div>
                     <h2>
-                      Trạng thái quyền
+                      Tr?ng thái quy?n
                     </h2>
                   </div>
                 </div>
@@ -3188,40 +3210,40 @@ const totalKpiValue =
                     <>
                       <div>
                         <b>
-                          🔐 Admin
+                          ?? Admin
                         </b>
 
                         <span>
-                          Có thể chỉnh sửa
-                          tất cả dữ liệu.
+                          Có th? ch?nh s?a
+                          t?t c? d? li?u.
                         </span>
                       </div>
 
                       <div>
-                        <b>✓ Đơn</b>
+                        <b>? Ðon</b>
 
                         <span>
-                          Thêm / sửa / xóa
-                          đơn đã đi và
-                          đơn đã trực.
+                          Thêm / s?a / xóa
+                          don dã di và
+                          don dã tr?c.
                         </span>
                       </div>
 
                       <div>
-                        <b>✓ KPI</b>
+                        <b>? KPI</b>
 
                         <span>
-                          Cập nhật điểm.
+                          C?p nh?t di?m.
                         </span>
                       </div>
 
                       <div>
-                        <b>✓ Phạt</b>
+                        <b>? Ph?t</b>
 
                         <span>
-                          Cập nhật lỗi,
-                          mức phạt,
-                          hình thức.
+                          C?p nh?t l?i,
+                          m?c ph?t,
+                          hình th?c.
                         </span>
                       </div>
                     </>
@@ -3229,23 +3251,23 @@ const totalKpiValue =
                     <>
                       <div>
                         <b>
-                          🔒 Staff
+                          ?? Staff
                         </b>
 
                         <span>
-                          Chỉ được xem dữ
-                          liệu của chính mình.
+                          Ch? du?c xem d?
+                          li?u c?a chính mình.
                         </span>
                       </div>
 
                       <div>
                         <b>
-                          ✕ Chỉnh sửa
+                          ? Ch?nh s?a
                         </b>
 
                         <span>
-                          Không thể thay đổi
-                          dữ liệu.
+                          Không th? thay d?i
+                          d? li?u.
                         </span>
                       </div>
                     </>
@@ -3263,12 +3285,12 @@ const totalKpiValue =
           {activeTab === "orders" && (
             <div className="content">
 
-              {/* ĐƠN ĐÃ ĐI */}
+              {/* ÐON ÐÃ ÐI */}
 
               {isAdmin ? (
                 <OrderEditor
-                  title="Đơn đã đi"
-                  description="Admin có thể thêm, sửa hoặc xóa đơn Staff đã đi."
+                  title="Ðon dã di"
+                  description="Admin có th? thêm, s?a ho?c xóa don Staff dã di."
                   orders={staffOrders}
                   onChange={(orders) => {
                     updatePerson(
@@ -3282,20 +3304,20 @@ const totalKpiValue =
                 />
               ) : (
                 <ReadonlyOrders
-                  title="Đơn đã đi"
-                  description="Danh sách các đơn Staff đã đi."
+                  title="Ðon dã di"
+                  description="Danh sách các don Staff dã di."
                   orders={staffOrders}
                 />
               )}
 
-              {/* ĐƠN ĐÃ TRỰC */}
+              {/* ÐON ÐÃ TR?C */}
 
               {pagePerson && (
                 <>
                   {isAdmin ? (
                     <OrderEditor
-                      title="Đơn đã trực"
-                      description="Admin có thể thêm, sửa hoặc xóa đơn Page đã trực."
+                      title="Ðon dã tr?c"
+                      description="Admin có th? thêm, s?a ho?c xóa don Page dã tr?c."
                       orders={pageOrders}
                       onChange={(orders) => {
                         updatePerson(
@@ -3309,27 +3331,27 @@ const totalKpiValue =
                     />
                   ) : (
                     <ReadonlyOrders
-                      title="Đơn đã trực"
-                      description="Danh sách các đơn Page đã trực."
+                      title="Ðon dã tr?c"
+                      description="Danh sách các don Page dã tr?c."
                       orders={pageOrders}
                     />
                   )}
                 </>
               )}
 
-              {/* TỔNG */}
+              {/* T?NG */}
 
               <section className="card">
                 <div className="section-title-row">
                   <div>
                     <h2>
-                      Tổng đơn
+                      T?ng don
                     </h2>
 
                     <p>
                       {pagePerson
-                        ? "Bao gồm cả đơn đã đi và đơn đã trực."
-                        : "Tổng số đơn đã đi."}
+                        ? "Bao g?m c? don dã di và don dã tr?c."
+                        : "T?ng s? don dã di."}
                     </p>
                   </div>
                 </div>
@@ -3337,7 +3359,7 @@ const totalKpiValue =
                 <div className="overview-grid">
                   <div>
                     <span>
-                      Đơn đã đi
+                      Ðon dã di
                     </span>
 
                     <strong>
@@ -3348,7 +3370,7 @@ const totalKpiValue =
                   {pagePerson && (
                     <div>
                       <span>
-                        Đơn đã trực
+                        Ðon dã tr?c
                       </span>
 
                       <strong>
@@ -3359,7 +3381,7 @@ const totalKpiValue =
 
                   <div>
                     <span>
-                      Tổng đơn
+                      T?ng don
                     </span>
 
                     <strong>
@@ -3369,7 +3391,7 @@ const totalKpiValue =
 
                   <div>
                     <span>
-                      Tổng tiền
+                      T?ng ti?n
                     </span>
 
                     <strong>
@@ -3412,7 +3434,7 @@ const totalKpiValue =
           )}
 
           {/* =================================================
-              PHẠT
+              PH?T
           ================================================= */}
 
           {activeTab === "penalty" && (
@@ -3447,13 +3469,13 @@ const totalKpiValue =
 
           <footer>
             <span>
-              Tra cứu thông tin KPI
+              Tra c?u thông tin KPI
             </span>
 
             <span>
               {isAdmin
-                ? "Chế độ quản trị"
-                : "Chế độ chỉ xem"}
+                ? "Ch? d? qu?n tr?"
+                : "Ch? d? ch? xem"}
             </span>
           </footer>
         </div>
@@ -4358,6 +4380,9 @@ footer {
   }
 }
 `;
+
+
+
 
 
 

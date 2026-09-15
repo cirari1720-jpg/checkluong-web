@@ -12,6 +12,7 @@ type Order = {
   customer_name: string;
   amount: number;
   tip: number;
+  staff_per_order: number;
   note: string | null;
   created_at: string;
 };
@@ -20,7 +21,7 @@ const STAFF = [
   "Q",
   "Zak",
   "Mthien",
-  "Vẹt",
+  "V\u1EB9t",
   "Ginz",
   "Mika",
   "Pi",
@@ -30,10 +31,9 @@ const STAFF = [
   "Byw",
   "Cae",
   "Elis",
-  "Dương",
   "ED",
-  "Mỏ",
-  "Hàn",
+  "M\u1ECF",
+  "H\u00E0n",
   "K",
   "Kz",
   "Min",
@@ -42,12 +42,11 @@ const STAFF = [
   "Pppp",
   "Sena",
   "Tia",
-  "Tèo",
+  "T\u00E8o",
   "Vi",
   "W",
-  "Zịt",
-  "Hoàng Bảo",
-  "Haru",
+  "Z\u1ECBt",
+  "Kio",
 ];
 
 export default function OrdersPage() {
@@ -85,6 +84,8 @@ export default function OrdersPage() {
   const [amount, setAmount] = useState("");
 
   const [tip, setTip] = useState("");
+
+  const [staffPerOrder, setStaffPerOrder] = useState("1");
 
   const [note, setNote] = useState("");
 
@@ -136,7 +137,7 @@ export default function OrdersPage() {
         );
 
         throw new Error(
-          "Không lấy được thông tin tài khoản."
+          "KhÃƒÂ´ng lÃ¡ÂºÂ¥y Ã„â€˜Ã†Â°Ã¡Â»Â£c thÃƒÂ´ng tin tÃƒÂ i khoÃ¡ÂºÂ£n."
         );
       }
 
@@ -166,18 +167,18 @@ export default function OrdersPage() {
         data = {
           error:
             text ||
-            "API không trả về dữ liệu hợp lệ.",
+            "API khÃƒÂ´ng trÃ¡ÂºÂ£ vÃ¡Â»Â dÃ¡Â»Â¯ liÃ¡Â»â€¡u hÃ¡Â»Â£p lÃ¡Â»â€¡.",
         };
       }
 
       if (!response.ok) {
         throw new Error(
           data.error ||
-            `Không thể tải dữ liệu. HTTP ${response.status}`
+            `KhÃƒÂ´ng thÃ¡Â»Æ’ tÃ¡ÂºÂ£i dÃ¡Â»Â¯ liÃ¡Â»â€¡u. HTTP ${response.status}`
         );
       }
 
-      // Đảm bảo luôn là array
+      // Ã„ÂÃ¡ÂºÂ£m bÃ¡ÂºÂ£o luÃƒÂ´n lÃƒÂ  array
       setOrders(
         Array.isArray(data)
           ? data
@@ -192,7 +193,7 @@ export default function OrdersPage() {
       setError(
         err instanceof Error
           ? err.message
-          : "Có lỗi xảy ra."
+          : "CÃƒÂ³ lÃ¡Â»â€”i xÃ¡ÂºÂ£y ra."
       );
     } finally {
       setLoading(false);
@@ -243,6 +244,12 @@ export default function OrdersPage() {
       const parsedTip =
         Number(tip || 0);
 
+      const parsedStaffPerOrder = Number(staffPerOrder);
+
+      if (!Number.isInteger(parsedStaffPerOrder) || parsedStaffPerOrder <= 0) {
+        throw new Error("Staff/Ä‘Æ¡n pháº£i lÃ  sá»‘ nguyÃªn lá»›n hÆ¡n 0.");
+      }
+
       if (
         !Number.isFinite(
           parsedAmount
@@ -250,7 +257,7 @@ export default function OrdersPage() {
         parsedAmount < 0
       ) {
         throw new Error(
-          "Số tiền đơn không hợp lệ."
+          "SÃ¡Â»â€˜ tiÃ¡Â»Ân Ã„â€˜Ã†Â¡n khÃƒÂ´ng hÃ¡Â»Â£p lÃ¡Â»â€¡."
         );
       }
 
@@ -261,7 +268,7 @@ export default function OrdersPage() {
         parsedTip < 0
       ) {
         throw new Error(
-          "Tiền tip không hợp lệ."
+          "TiÃ¡Â»Ân tip khÃƒÂ´ng hÃ¡Â»Â£p lÃ¡Â»â€¡."
         );
       }
 
@@ -283,6 +290,9 @@ export default function OrdersPage() {
 
         tip:
           parsedTip,
+
+        staff_per_order:
+          Number(staffPerOrder),
 
         note:
           note.trim(),
@@ -321,7 +331,7 @@ export default function OrdersPage() {
         data = {
           error:
             text ||
-            "API không trả về dữ liệu hợp lệ.",
+            "API khÃƒÂ´ng trÃ¡ÂºÂ£ vÃ¡Â»Â dÃ¡Â»Â¯ liÃ¡Â»â€¡u hÃ¡Â»Â£p lÃ¡Â»â€¡.",
         };
       }
 
@@ -334,12 +344,12 @@ export default function OrdersPage() {
       if (!response.ok) {
         throw new Error(
           data.error ||
-            `Không thể thêm đơn. HTTP ${response.status}`
+            `KhÃƒÂ´ng thÃ¡Â»Æ’ thÃƒÂªm Ã„â€˜Ã†Â¡n. HTTP ${response.status}`
         );
       }
 
       setSuccess(
-        "Nhập đơn thành công!"
+        "NhÃ¡ÂºÂ­p Ã„â€˜Ã†Â¡n thÃƒÂ nh cÃƒÂ´ng!"
       );
 
       resetForm();
@@ -354,7 +364,7 @@ export default function OrdersPage() {
       setError(
         err instanceof Error
           ? err.message
-          : "Không thể thêm đơn."
+          : "KhÃƒÂ´ng thÃ¡Â»Æ’ thÃƒÂªm Ã„â€˜Ã†Â¡n."
       );
     } finally {
       setSubmitting(false);
@@ -399,14 +409,14 @@ export default function OrdersPage() {
       id <= 0
     ) {
       setError(
-        "ID đơn hàng không hợp lệ."
+        "ID Ã„â€˜Ã†Â¡n hÃƒÂ ng khÃƒÂ´ng hÃ¡Â»Â£p lÃ¡Â»â€¡."
       );
 
       return;
     }
 
-    // QUAN TRỌNG:
-    // Lưu ID database vào editingId
+    // QUAN TRÃ¡Â»Å’NG:
+    // LÃ†Â°u ID database vÃƒÂ o editingId
     setEditingId(id);
 
     setOrderDate(
@@ -434,6 +444,12 @@ export default function OrdersPage() {
     setTip(
       String(
         order.tip ?? 0
+      )
+    );
+
+    setStaffPerOrder(
+      String(
+        order.staff_per_order ?? 1
       )
     );
 
@@ -474,12 +490,12 @@ export default function OrdersPage() {
     );
 
     // ==================================================
-    // KIỂM TRA EDITING ID
+    // KIÃ¡Â»â€šM TRA EDITING ID
     // ==================================================
 
     if (editingId === null) {
       setError(
-        "Không xác định được ID đơn cần cập nhật."
+        "KhÃƒÂ´ng xÃƒÂ¡c Ã„â€˜Ã¡Â»â€¹nh Ã„â€˜Ã†Â°Ã¡Â»Â£c ID Ã„â€˜Ã†Â¡n cÃ¡ÂºÂ§n cÃ¡ÂºÂ­p nhÃ¡ÂºÂ­t."
       );
 
       console.error(
@@ -502,7 +518,7 @@ export default function OrdersPage() {
       id <= 0
     ) {
       setError(
-        "ID đơn hàng không hợp lệ."
+        "ID Ã„â€˜Ã†Â¡n hÃƒÂ ng khÃƒÂ´ng hÃ¡Â»Â£p lÃ¡Â»â€¡."
       );
 
       console.error(
@@ -549,6 +565,19 @@ export default function OrdersPage() {
       return;
     }
 
+    const parsedStaffPerOrder =
+      Number(staffPerOrder);
+
+    if (
+      !Number.isInteger(parsedStaffPerOrder) ||
+      parsedStaffPerOrder <= 0
+    ) {
+      setError(
+        "Staff/đơn phải là số nguyên lớn hơn 0."
+      );
+
+      return;
+    }
     setSubmitting(true);
 
     // ==================================================
@@ -559,7 +588,7 @@ export default function OrdersPage() {
       // ID DATABASE
       id: id,
 
-      // Gửi thêm order_id để tương thích
+      // GÃ¡Â»Â­i thÃƒÂªm order_id Ã„â€˜Ã¡Â»Æ’ tÃ†Â°Ã†Â¡ng thÃƒÂ­ch
       order_id: id,
 
       order_date:
@@ -578,7 +607,10 @@ export default function OrdersPage() {
         parsedAmount,
 
       tip:
-        parsedTip,
+          parsedTip,
+
+        staff_per_order:
+          Number(staffPerOrder),
 
       note:
         note.trim(),
@@ -647,7 +679,7 @@ export default function OrdersPage() {
         data = {
           error:
             text ||
-            "API không trả về dữ liệu hợp lệ.",
+            "API khÃƒÂ´ng trÃ¡ÂºÂ£ vÃ¡Â»Â dÃ¡Â»Â¯ liÃ¡Â»â€¡u hÃ¡Â»Â£p lÃ¡Â»â€¡.",
         };
       }
 
@@ -672,7 +704,7 @@ export default function OrdersPage() {
       if (!response.ok) {
         throw new Error(
           data.error ||
-            `Không thể cập nhật đơn. HTTP ${response.status}`
+            `KhÃƒÂ´ng thÃ¡Â»Æ’ cÃ¡ÂºÂ­p nhÃ¡ÂºÂ­t Ã„â€˜Ã†Â¡n. HTTP ${response.status}`
         );
       }
 
@@ -681,7 +713,7 @@ export default function OrdersPage() {
       // ==================================================
 
       setSuccess(
-        "Cập nhật đơn thành công!"
+        "CÃ¡ÂºÂ­p nhÃ¡ÂºÂ­t Ã„â€˜Ã†Â¡n thÃƒÂ nh cÃƒÂ´ng!"
       );
 
       resetForm();
@@ -696,7 +728,7 @@ export default function OrdersPage() {
       setError(
         err instanceof Error
           ? err.message
-          : "Không thể cập nhật đơn."
+          : "KhÃƒÂ´ng thÃ¡Â»Æ’ cÃ¡ÂºÂ­p nhÃ¡ÂºÂ­t Ã„â€˜Ã†Â¡n."
       );
     } finally {
       setSubmitting(false);
@@ -732,7 +764,7 @@ export default function OrdersPage() {
   ) {
     const confirmed =
       window.confirm(
-        `Bạn có chắc muốn xóa đơn "${order.order_code}" của ${order.staff_name}?`
+        `BÃ¡ÂºÂ¡n cÃƒÂ³ chÃ¡ÂºÂ¯c muÃ¡Â»â€˜n xÃƒÂ³a Ã„â€˜Ã†Â¡n "${order.order_code}" cÃ¡Â»Â§a ${order.staff_name}?`
       );
 
     if (!confirmed) {
@@ -761,7 +793,7 @@ export default function OrdersPage() {
         id <= 0
       ) {
         throw new Error(
-          "ID đơn hàng không hợp lệ."
+          "ID Ã„â€˜Ã†Â¡n hÃƒÂ ng khÃƒÂ´ng hÃ¡Â»Â£p lÃ¡Â»â€¡."
         );
       }
 
@@ -794,7 +826,7 @@ export default function OrdersPage() {
         data = {
           error:
             text ||
-            "API không trả về dữ liệu hợp lệ.",
+            "API khÃƒÂ´ng trÃ¡ÂºÂ£ vÃ¡Â»Â dÃ¡Â»Â¯ liÃ¡Â»â€¡u hÃ¡Â»Â£p lÃ¡Â»â€¡.",
         };
       }
 
@@ -807,12 +839,12 @@ export default function OrdersPage() {
       if (!response.ok) {
         throw new Error(
           data.error ||
-            `Không thể xóa đơn. HTTP ${response.status}`
+            `KhÃƒÂ´ng thÃ¡Â»Æ’ xÃƒÂ³a Ã„â€˜Ã†Â¡n. HTTP ${response.status}`
         );
       }
 
       setSuccess(
-        "Xóa đơn thành công!"
+        "XÃƒÂ³a Ã„â€˜Ã†Â¡n thÃƒÂ nh cÃƒÂ´ng!"
       );
 
       if (
@@ -831,7 +863,7 @@ export default function OrdersPage() {
       setError(
         err instanceof Error
           ? err.message
-          : "Không thể xóa đơn."
+          : "KhÃƒÂ´ng thÃ¡Â»Æ’ xÃƒÂ³a Ã„â€˜Ã†Â¡n."
       );
     }
   }
@@ -882,7 +914,7 @@ export default function OrdersPage() {
       ================================================== */}
 
       <h1>
-        Danh sách đơn hàng
+        Danh sÃƒÂ¡ch Ã„â€˜Ã†Â¡n hÃƒÂ ng
       </h1>
 
       <p
@@ -890,14 +922,14 @@ export default function OrdersPage() {
           marginBottom: "20px",
         }}
       >
-        Tài khoản:{" "}
+        TÃƒÂ i khoÃ¡ÂºÂ£n:{" "}
         <strong>
           {profileName || "..."}
         </strong>
 
-        {" · "}
+        {" Ã‚Â· "}
 
-        Quyền:{" "}
+        QuyÃ¡Â»Ân:{" "}
         <strong>
           {role || "..."}
         </strong>
@@ -922,7 +954,7 @@ export default function OrdersPage() {
               loading ? 0.6 : 1,
           }}
         >
-          Làm mới
+          LÃƒÂ m mÃ¡Â»â€ºi
         </button>
 
         <button
@@ -933,7 +965,7 @@ export default function OrdersPage() {
             marginLeft: "10px",
           }}
         >
-          Đăng xuất
+          Ã„ÂÃ„Æ’ng xuÃ¡ÂºÂ¥t
         </button>
       </div>
 
@@ -958,8 +990,8 @@ export default function OrdersPage() {
             }}
           >
             {editingId !== null
-              ? `Sửa đơn #${editingId}`
-              : "Nhập đơn hàng"}
+              ? `SÃ¡Â»Â­a Ã„â€˜Ã†Â¡n #${editingId}`
+              : "NhÃ¡ÂºÂ­p Ã„â€˜Ã†Â¡n hÃƒÂ ng"}
           </h2>
 
           <form
@@ -976,12 +1008,12 @@ export default function OrdersPage() {
             }}
           >
             {/* ============================================
-                NGÀY
+                NGÃƒâ‚¬Y
             ============================================ */}
 
             <div>
               <label>
-                Ngày
+                NgÃƒÂ y
               </label>
 
               <input
@@ -998,12 +1030,12 @@ export default function OrdersPage() {
             </div>
 
             {/* ============================================
-                MÃ ĐƠN
+                MÃƒÆ’ Ã„ÂÃ†Â N
             ============================================ */}
 
             <div>
               <label>
-                Mã đơn
+                MÃƒÂ£ Ã„â€˜Ã†Â¡n
               </label>
 
               <input
@@ -1040,7 +1072,7 @@ export default function OrdersPage() {
                 style={inputStyle}
               >
                 <option value="">
-                  -- Chọn staff --
+                  -- ChÃ¡Â»Ân staff --
                 </option>
 
                 {STAFF.map(
@@ -1057,12 +1089,12 @@ export default function OrdersPage() {
             </div>
 
             {/* ============================================
-                KHÁCH HÀNG
+                KHÃƒÂCH HÃƒâ‚¬NG
             ============================================ */}
 
             <div>
               <label>
-                Khách hàng
+                KhÃƒÂ¡ch hÃƒÂ ng
               </label>
 
               <input
@@ -1075,19 +1107,19 @@ export default function OrdersPage() {
                     e.target.value
                   )
                 }
-                placeholder="Tên khách hàng"
+                placeholder="TÃƒÂªn khÃƒÂ¡ch hÃƒÂ ng"
                 required
                 style={inputStyle}
               />
             </div>
 
             {/* ============================================
-                SỐ TIỀN
+                SÃ¡Â»Â TIÃ¡Â»â‚¬N
             ============================================ */}
 
             <div>
               <label>
-                Số tiền
+                SÃ¡Â»â€˜ tiÃ¡Â»Ân
               </label>
 
               <input
@@ -1128,8 +1160,26 @@ export default function OrdersPage() {
               />
             </div>
 
+            <div>
+              <label>
+                Staff/Ã„â€˜Ã†Â¡n
+              </label>
+
+              <input
+                type="number"
+                min="1"
+                step="1"
+                value={staffPerOrder}
+                onChange={(e) =>
+                  setStaffPerOrder(e.target.value)
+                }
+                placeholder="SÃ¡Â»â€˜ staff tham gia Ã„â€˜Ã†Â¡n"
+                style={inputStyle}
+              />
+            </div>
+
             {/* ============================================
-                GHI CHÚ
+                GHI CHÃƒÅ¡
             ============================================ */}
 
             <div
@@ -1139,7 +1189,7 @@ export default function OrdersPage() {
               }}
             >
               <label>
-                Ghi chú
+                Ghi chÃƒÂº
               </label>
 
               <input
@@ -1150,7 +1200,7 @@ export default function OrdersPage() {
                     e.target.value
                   )
                 }
-                placeholder="Ghi chú đơn hàng"
+                placeholder="Ghi chÃƒÂº Ã„â€˜Ã†Â¡n hÃƒÂ ng"
                 style={inputStyle}
               />
             </div>
@@ -1183,12 +1233,12 @@ export default function OrdersPage() {
                 {submitting
                   ? editingId !==
                     null
-                    ? "Đang cập nhật..."
-                    : "Đang nhập..."
+                    ? "Ã„Âang cÃ¡ÂºÂ­p nhÃ¡ÂºÂ­t..."
+                    : "Ã„Âang nhÃ¡ÂºÂ­p..."
                   : editingId !==
                     null
-                  ? "Lưu thay đổi"
-                  : "Nhập đơn"}
+                  ? "LÃ†Â°u thay Ã„â€˜Ã¡Â»â€¢i"
+                  : "NhÃ¡ÂºÂ­p Ã„â€˜Ã†Â¡n"}
               </button>
 
               {editingId !==
@@ -1205,7 +1255,7 @@ export default function OrdersPage() {
                     buttonStyle
                   }
                 >
-                  Hủy sửa
+                  HÃ¡Â»Â§y sÃ¡Â»Â­a
                 </button>
               )}
             </div>
@@ -1241,7 +1291,7 @@ export default function OrdersPage() {
             marginBottom: "15px",
           }}
         >
-          Lỗi: {error}
+          LÃ¡Â»â€”i: {error}
         </p>
       )}
 
@@ -1251,7 +1301,7 @@ export default function OrdersPage() {
 
       {loading && (
         <p>
-          Đang tải dữ liệu...
+          Ã„Âang tÃ¡ÂºÂ£i dÃ¡Â»Â¯ liÃ¡Â»â€¡u...
         </p>
       )}
 
@@ -1263,7 +1313,7 @@ export default function OrdersPage() {
         !error &&
         orders.length === 0 && (
           <p>
-            Chưa có đơn hàng nào.
+            ChÃ†Â°a cÃƒÂ³ Ã„â€˜Ã†Â¡n hÃƒÂ ng nÃƒÂ o.
           </p>
         )}
 
@@ -1294,13 +1344,13 @@ export default function OrdersPage() {
                   <th
                     style={thStyle}
                   >
-                    Ngày
+                    NgÃƒÂ y
                   </th>
 
                   <th
                     style={thStyle}
                   >
-                    Mã đơn
+                    MÃƒÂ£ Ã„â€˜Ã†Â¡n
                   </th>
 
                   <th
@@ -1312,7 +1362,7 @@ export default function OrdersPage() {
                   <th
                     style={thStyle}
                   >
-                    Số tiền
+                    SÃ¡Â»â€˜ tiÃ¡Â»Ân
                   </th>
 
                   <th
@@ -1324,7 +1374,7 @@ export default function OrdersPage() {
                   <th
                     style={thStyle}
                   >
-                    Ghi chú
+                    Ghi chÃƒÂº
                   </th>
 
                   {role ===
@@ -1334,7 +1384,7 @@ export default function OrdersPage() {
                         thStyle
                       }
                     >
-                      Thao tác
+                      Thao tÃƒÂ¡c
                     </th>
                   )}
                 </tr>
@@ -1404,7 +1454,7 @@ export default function OrdersPage() {
                         ).toLocaleString(
                           "vi-VN"
                         )}
-                        đ
+                        Ã„â€˜
                       </td>
 
                       {/* ================================
@@ -1412,7 +1462,7 @@ export default function OrdersPage() {
                       ================================= */}
 
 <td style={tdStyle}>
-  {Number(order.tip ?? 0).toLocaleString("vi-VN")}đ
+  {Number(order.tip ?? 0).toLocaleString("vi-VN")}Ã„â€˜
 </td>
                       {/* ================================
                           NOTE
@@ -1458,7 +1508,7 @@ export default function OrdersPage() {
                                 "8px",
                             }}
                           >
-                            Sửa
+                            SÃ¡Â»Â­a
                           </button>
 
                           <button
@@ -1475,7 +1525,7 @@ export default function OrdersPage() {
                               dangerButtonStyle
                             }
                           >
-                            Xóa
+                            XÃƒÂ³a
                           </button>
                         </td>
                       )}

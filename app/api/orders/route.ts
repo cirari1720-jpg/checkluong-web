@@ -17,6 +17,7 @@ type OrderBody = {
 
   amount?: number | string;
   tip?: number | string;
+  staff_per_order?: number | string;
 
   note?: string | null;
 };
@@ -223,6 +224,7 @@ export async function POST(
       customer_name,
       amount,
       tip,
+      staff_per_order,
       note,
     } = body;
 
@@ -249,6 +251,18 @@ export async function POST(
 
     const parsedTip =
       Number(tip ?? 0);
+
+    const parsedStaffPerOrder =
+      Number(staff_per_order ?? 1);
+
+    if (
+      !Number.isInteger(parsedStaffPerOrder) ||
+      parsedStaffPerOrder <= 0
+    ) {
+      return jsonError(
+        "Staff/đơn phải là số nguyên lớn hơn 0."
+      );
+    }
 
     if (
       !Number.isFinite(parsedAmount) ||
@@ -306,6 +320,9 @@ export async function POST(
 
         tip:
           parsedTip,
+
+        staff_per_order:
+          parsedStaffPerOrder,
 
         note:
           note == null
@@ -573,6 +590,27 @@ async function updateOrder(
 
       updateData.tip =
         parsedTip;
+    }
+
+    if (
+      body.staff_per_order !== undefined
+    ) {
+      const parsedStaffPerOrder =
+        Number(body.staff_per_order);
+
+      if (
+        !Number.isInteger(
+          parsedStaffPerOrder
+        ) ||
+        parsedStaffPerOrder <= 0
+      ) {
+        return jsonError(
+          "Staff/đơn phải là số nguyên lớn hơn 0."
+        );
+      }
+
+      updateData.staff_per_order =
+        parsedStaffPerOrder;
     }
 
     if (
@@ -1099,5 +1137,7 @@ function order_dateIsProvided(
 ) {
   return body.order_date !== undefined;
 }
+
+
 
 

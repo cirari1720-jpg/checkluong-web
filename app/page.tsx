@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import { useEffect, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
@@ -1156,13 +1156,82 @@ export default function Home() {
       "overview" |
       "orders" |
       "kpi" |
-      "penalty"
+      "penalty" |
+      "salary"
     >("overview");
 
   const [loaded, setLoaded] =
     useState(false);
 
+  const [monthlySalaryMonth, setMonthlySalaryMonth] =
+    useState("2026-08");
+
+  const [monthlySalary, setMonthlySalary] =
+    useState<any>(null);
+
+  const [monthlySalaryLoading, setMonthlySalaryLoading] =
+    useState(false);
+
+  const [monthlySalaryError, setMonthlySalaryError] =
+    useState("");
+
   /* =======================================================
+  useEffect(() => {
+    if (!currentUser || activeTab !== "salary") return;
+
+    let cancelled = false;
+
+    async function loadMonthlySalary() {
+      setMonthlySalaryLoading(true);
+      setMonthlySalaryError("");
+
+      try {
+        const response = await fetch(
+          `/api/monthly-salary?month=${monthlySalaryMonth}`,
+          {
+            method: "GET",
+            cache: "no-store",
+          }
+        );
+
+        const result = await response.json();
+
+        if (cancelled) return;
+
+        if (!response.ok) {
+          throw new Error(
+            String(result?.error || "Không thể tải lương tháng.")
+          );
+        }
+
+        setMonthlySalary(result);
+      } catch (error) {
+        if (cancelled) return;
+
+        console.error(
+          "MONTHLY SALARY LOAD ERROR:",
+          error
+        );
+
+        setMonthlySalary(null);
+        setMonthlySalaryError(
+          error instanceof Error
+            ? error.message
+            : "Không thể tải lương tháng."
+        );
+      } finally {
+        if (!cancelled) {
+          setMonthlySalaryLoading(false);
+        }
+      }
+    }
+
+    loadMonthlySalary();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [currentUser, activeTab, monthlySalaryMonth]);
      LOAD
   ======================================================= */
 
@@ -3095,6 +3164,20 @@ const totalKpiValue =
             >
               Phạt
             </button>
+            <button
+              className={
+                activeTab === "salary"
+                  ? "tab active"
+                  : "tab"
+              }
+              onClick={() =>
+                setActiveTab(
+                  "salary"
+                )
+              }
+            >
+              Lương tháng
+            </button>
           </nav>
 
           {/* =================================================
@@ -3454,6 +3537,336 @@ const totalKpiValue =
             </div>
           )}
 
+          {/* =================================================
+              LƯƠNG THÁNG
+          ================================================= */}
+
+          {activeTab === "salary" && (
+            <div className="content">
+              <section className="card">
+                <div className="section-title-row">
+                  <div>
+                    <h2>
+                      Lương tháng
+                    </h2>
+
+                    <p>
+                      {isAdmin
+                        ? `Tra cứu lương tháng của ${viewingName}.`
+                        : "Tra cứu lương tháng của bạn."}
+                    </p>
+                  </div>
+                </div>
+
+                <div
+                  style={{
+                    display: "flex",
+                    gap: "12px",
+                    alignItems: "end",
+                    flexWrap: "wrap",
+                    marginBottom: "20px",
+                  }}
+                >
+                  <div>
+                    <label
+                      style={{
+                        display: "block",
+                        marginBottom: "6px",
+                        fontWeight: 700,
+                      }}
+                    >
+                      Tháng
+                    </label>
+
+                    <input
+                      type="month"
+                      value={monthlySalaryMonth}
+                      min="2026-08"
+                      onChange={(e) => {
+                        setMonthlySalaryMonth(
+                          e.target.value
+                        );
+                      }}
+                      style={{
+                        padding: "10px 12px",
+                        borderRadius: "10px",
+                        border: "1px solid #d9def0",
+                        background: "#fff",
+                        fontSize: "14px",
+                      }}
+                    />
+                  </div>
+                </div>
+
+                {monthlySalaryLoading ? (
+                  <div className="card">
+                    Đang tải dữ liệu lương tháng...
+                  </div>
+                ) : monthlySalaryError ? (
+                  <div className="card">
+                    <strong>
+                      Không thể tải lương tháng
+                    </strong>
+
+                    <p>
+                      {monthlySalaryError}
+                    </p>
+                  </div>
+                ) : monthlySalary ? (
+                  <>
+                    <div className="overview-grid">
+                      <div>
+                        <span>
+                          Giá trị đơn
+                        </span>
+
+                        <strong>
+                          {money(
+                            monthlySalary.summary
+                              ?.orderValue ?? 0
+                          )}
+                        </strong>
+                      </div>
+
+                      <div>
+                        <span>
+                          Khấu trừ 20%
+                        </span>
+
+                        <strong>
+                          {money(
+                            monthlySalary.summary
+                              ?.deduction20 ?? 0
+                          )}
+                        </strong>
+                      </div>
+
+                      <div>
+                        <span>
+                          Sau khấu trừ
+                        </span>
+
+                        <strong>
+                          {money(
+                            monthlySalary.summary
+                              ?.salaryAfterDeduction ?? 0
+                          )}
+                        </strong>
+                      </div>
+
+                      <div>
+                        <span>
+                          Tip
+                        </span>
+
+                        <strong>
+                          {money(
+                            monthlySalary.summary
+                              ?.tip ?? 0
+                          )}
+                        </strong>
+                      </div>
+
+                      <div>
+                        <span>
+                          Tổng nhận
+                        </span>
+
+                        <strong>
+                          {money(
+                            monthlySalary.summary
+                              ?.total ?? 0
+                          )}
+                        </strong>
+                      </div>
+                    </div>
+
+                    <div
+                      style={{
+                        overflowX: "auto",
+                        marginTop: "24px",
+                      }}
+                    >
+                      {Array.isArray(
+                        monthlySalary.orders
+                      ) &&
+                      monthlySalary.orders.length > 0 ? (
+                        <table
+                          style={{
+                            width: "100%",
+                            borderCollapse:
+                              "collapse",
+                          }}
+                        >
+                          <thead>
+                            <tr>
+                              <th
+                                style={{
+                                  textAlign: "left",
+                                  padding: "10px",
+                                }}
+                              >
+                                Đơn
+                              </th>
+
+                              <th
+                                style={{
+                                  textAlign: "right",
+                                  padding: "10px",
+                                }}
+                              >
+                                Giá trị đơn
+                              </th>
+
+                              <th
+                                style={{
+                                  textAlign: "center",
+                                  padding: "10px",
+                                }}
+                              >
+                                Staff/đơn
+                              </th>
+
+                              <th
+                                style={{
+                                  textAlign: "right",
+                                  padding: "10px",
+                                }}
+                              >
+                                Khấu trừ 20%
+                              </th>
+
+                              <th
+                                style={{
+                                  textAlign: "right",
+                                  padding: "10px",
+                                }}
+                              >
+                                Sau khấu trừ
+                              </th>
+
+                              <th
+                                style={{
+                                  textAlign: "right",
+                                  padding: "10px",
+                                }}
+                              >
+                                Tip
+                              </th>
+
+                              <th
+                                style={{
+                                  textAlign: "right",
+                                  padding: "10px",
+                                }}
+                              >
+                                Tổng nhận
+                              </th>
+                            </tr>
+                          </thead>
+
+                          <tbody>
+                            {monthlySalary.orders.map(
+                              (order: any) => (
+                                <tr key={order.id}>
+                                  <td
+                                    style={{
+                                      padding: "10px",
+                                    }}
+                                  >
+                                    {order.order_code}
+                                  </td>
+
+                                  <td
+                                    style={{
+                                      padding: "10px",
+                                      textAlign:
+                                        "right",
+                                    }}
+                                  >
+                                    {money(
+                                      order.gross_share
+                                    )}
+                                  </td>
+
+                                  <td
+                                    style={{
+                                      padding: "10px",
+                                      textAlign:
+                                        "center",
+                                    }}
+                                  >
+                                    {order.staff_per_order}
+                                  </td>
+
+                                  <td
+                                    style={{
+                                      padding: "10px",
+                                      textAlign:
+                                        "right",
+                                    }}
+                                  >
+                                    {money(
+                                      order.deduction_20
+                                    )}
+                                  </td>
+
+                                  <td
+                                    style={{
+                                      padding: "10px",
+                                      textAlign:
+                                        "right",
+                                    }}
+                                  >
+                                    {money(
+                                      order.salary_share
+                                    )}
+                                  </td>
+
+                                  <td
+                                    style={{
+                                      padding: "10px",
+                                      textAlign:
+                                        "right",
+                                    }}
+                                  >
+                                    {money(
+                                      order.tip_share
+                                    )}
+                                  </td>
+
+                                  <td
+                                    style={{
+                                      padding: "10px",
+                                      textAlign:
+                                        "right",
+                                        fontWeight: 800,
+                                    }}
+                                  >
+                                    {money(
+                                      order.total
+                                    )}
+                                  </td>
+                                </tr>
+                              )
+                            )}
+                          </tbody>
+                        </table>
+                      ) : (
+                        <div className="card">
+                          Chưa có đơn trong tháng này.
+                        </div>
+                      )}
+                    </div>
+                  </>
+                ) : (
+                  <div className="card">
+                    Chưa có dữ liệu lương tháng.
+                  </div>
+                )}
+              </section>
+            </div>
+          )}
           {/* FOOTER */}
 
           <footer>

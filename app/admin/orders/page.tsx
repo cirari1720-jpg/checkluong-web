@@ -1046,7 +1046,7 @@ export default function OrdersPage() {
                     e.target.value
                   )
                 }
-                placeholder="VD: DH001"
+                placeholder="3000"
                 required
                 style={inputStyle}
               />
@@ -1107,7 +1107,7 @@ export default function OrdersPage() {
                     e.target.value
                   )
                 }
-                placeholder="TÃƒÂªn khÃƒÂ¡ch hÃƒÂ ng"
+                placeholder="Số staff tham gia đơn"
                 required
                 style={inputStyle}
               />
@@ -1131,7 +1131,7 @@ export default function OrdersPage() {
                     e.target.value
                   )
                 }
-                placeholder="80000"
+                placeholder="Số staff tham gia đơn"
                 required
                 style={inputStyle}
               />
@@ -1162,7 +1162,7 @@ export default function OrdersPage() {
 
             <div>
               <label>
-                Staff/Ã„â€˜Ã†Â¡n
+                Staff/đơn
               </label>
 
               <input
@@ -1173,13 +1173,13 @@ export default function OrdersPage() {
                 onChange={(e) =>
                   setStaffPerOrder(e.target.value)
                 }
-                placeholder="SÃ¡Â»â€˜ staff tham gia Ã„â€˜Ã†Â¡n"
+                placeholder="Số staff tham gia đơn"
                 style={inputStyle}
               />
             </div>
 
             {/* ============================================
-                GHI CHÃƒÅ¡
+                GHI CHÚ
             ============================================ */}
 
             <div
@@ -1189,7 +1189,7 @@ export default function OrdersPage() {
               }}
             >
               <label>
-                Ghi chÃƒÂº
+                Ghi chú
               </label>
 
               <input
@@ -1200,7 +1200,7 @@ export default function OrdersPage() {
                     e.target.value
                   )
                 }
-                placeholder="Ghi chÃƒÂº Ã„â€˜Ã†Â¡n hÃƒÂ ng"
+                placeholder="Số staff tham gia đơn"
                 style={inputStyle}
               />
             </div>

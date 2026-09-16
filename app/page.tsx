@@ -523,6 +523,76 @@ function OrderEditor({
                 >
                   🗑 Xóa đơn
                 </button>
+                <div
+                  className="order-calculation"
+                  style={{
+                    gridColumn: "2 / -1",
+                    display: "grid",
+                    gridTemplateColumns: "repeat(5, minmax(0, 1fr))",
+                    gap: "10px",
+                    marginTop: "10px",
+                    padding: "10px 12px",
+                    borderRadius: "10px",
+                    background: "#f8faff",
+                    border: "1px solid #e1e7f5",
+                    fontSize: "12px",
+                  }}
+                >
+                  <div>
+                    <span style={{ display: "block", color: "#64748b", fontWeight: 700 }}>
+                      {"Kh\u1ea5u tr\u1eeb 20%"}
+                    </span>
+                    <strong>
+                      {money((Number(order.amount) || 0) * 0.2)}
+                    </strong>
+                  </div>
+
+                  <div>
+                    <span style={{ display: "block", color: "#64748b", fontWeight: 700 }}>
+                      {"Sau kh\u1ea5u tr\u1eeb"}
+                    </span>
+                    <strong>
+                      {money((Number(order.amount) || 0) * 0.8)}
+                    </strong>
+                  </div>
+
+                  <div>
+                    <span style={{ display: "block", color: "#64748b", fontWeight: 700 }}>
+                      {"Sau kh\u1ea5u tr\u1eeb / staff"}
+                    </span>
+                    <strong>
+                      {money(
+                        ((Number(order.amount) || 0) * 0.8) /
+                        Math.max(1, Number(order.staff_per_order) || 1)
+                      )}
+                    </strong>
+                  </div>
+
+                  <div>
+                    <span style={{ display: "block", color: "#64748b", fontWeight: 700 }}>
+                      {"Tip / staff"}
+                    </span>
+                    <strong>
+                      {money(
+                        (Number(order.tip) || 0) /
+                        Math.max(1, Number(order.staff_per_order) || 1)
+                      )}
+                    </strong>
+                  </div>
+
+                  <div>
+                    <span style={{ display: "block", color: "#64748b", fontWeight: 700 }}>
+                      {"T\u1ed5ng m\u1ed7i staff"}
+                    </span>
+                    <strong>
+                      {money(
+                        ((Number(order.amount) || 0) * 0.8 +
+                          (Number(order.tip) || 0)) /
+                        Math.max(1, Number(order.staff_per_order) || 1)
+                      )}
+                    </strong>
+                  </div>
+                </div>
               </div>
             )
           )}

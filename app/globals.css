@@ -1213,3 +1213,37 @@ body {
 .staff-order-chevron.is-open {
   transform: rotate(180deg);
 }
+/* Final chevron fix */
+.staff-order-chevron {
+  width: 24px !important;
+  height: 24px !important;
+  flex: 0 0 24px !important;
+  display: flex !important;
+  align-items: center;
+  justify-content: center;
+  margin: 0 !important;
+  transform: none !important;
+  transition: none !important;
+}
+
+.staff-order-chevron svg {
+  width: 18px;
+  height: 18px;
+  display: block;
+  transition: transform 0.2s ease;
+}
+
+.staff-order-chevron path {
+  stroke: #17213f;
+  stroke-width: 2.2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.staff-order-chevron::before {
+  display: none !important;
+}
+
+.staff-order-chevron.is-open svg {
+  transform: rotate(180deg);
+}

@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import { useEffect, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
@@ -3887,7 +3887,7 @@ const totalKpiValue =
                     <div className="overview-grid">
                       <div>
                         <span>
-                          Giá trị đơn
+                          Tiền đơn
                         </span>
 
                         <strong>
@@ -3978,6 +3978,7 @@ const totalKpiValue =
                               >
                                 Đơn
                               </th>
+                              <th style={{ textAlign: "left", padding: "10px" }}>Ngày</th>
 
                               <th
                                 style={{
@@ -3985,7 +3986,7 @@ const totalKpiValue =
                                   padding: "10px",
                                 }}
                               >
-                                Giá trị đơn
+                                Tiền đơn
                               </th>
 
                               <th
@@ -4047,6 +4048,10 @@ const totalKpiValue =
                                     {order.order_code}
                                   </td>
 
+                                  <td style={{ padding: "10px" }}>
+                                    {order.order_date ? new Date(order.order_date).toLocaleDateString("vi-VN") : "-"}
+                                  </td>
+
                                   <td
                                     style={{
                                       padding: "10px",
@@ -4054,9 +4059,7 @@ const totalKpiValue =
                                         "right",
                                     }}
                                   >
-                                    {money(
-                                      order.gross_share
-                                    )}
+                                    {money(order.amount)}
                                   </td>
 
                                   <td

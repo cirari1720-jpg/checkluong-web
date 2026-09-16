@@ -36,11 +36,13 @@ export async function GET(request: NextRequest) {
     let query = supabase
       .from("orders")
       .select(
-        "id, order_code, order_date, staff_name, amount, tip, staff_per_order, order_type"
+        "id, order_code, order_date, closed_date, staff_name, amount, tip, staff_per_order, order_type"
       )
       .eq("order_type", "staff")
-      .gte("order_date", startDate)
-      .lt("order_date", endDate)
+      .eq("is_closed", true)
+      .gte("closed_date", startDate)
+      .lt("closed_date", endDate)
+      .order("closed_date", { ascending: true })
       .order("order_date", { ascending: true });
 
     if (user.role === "staff") {
@@ -73,6 +75,7 @@ export async function GET(request: NextRequest) {
         id: order.id,
         order_code: order.order_code,
         order_date: order.order_date,
+        closed_date: order.closed_date,
         staff_name: order.staff_name,
         amount,
         tip,

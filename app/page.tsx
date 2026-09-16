@@ -350,6 +350,90 @@ function OrderEditor({
   onChange: (orders: Order[]) => void;
   staffName?: string;
 }) {
+  const [closeDate, setCloseDate] = useState(() => {
+    const now = new Date();
+    const year = now.getFullYear();
+    const month = String(now.getMonth() + 1).padStart(2, "0");
+    const day = String(now.getDate()).padStart(2, "0");
+    return `${year}-${month}-${day}`;
+  });
+
+  const [isClosing, setIsClosing] = useState(false);
+
+  async function closeAllOrders() {
+    if (!staffName) {
+      alert("Không xác định được Staff cần chốt.");
+      return;
+    }
+
+    if (orders.length === 0) {
+      alert(`Không có đơn chưa chốt của ${staffName}.`);
+      return;
+    }
+
+    if (!closeDate) {
+      alert("Vui lòng chọn ngày chốt.");
+      return;
+    }
+
+    const confirmed = window.confirm(
+      `Bạn có chắc muốn LƯU & CHỐT tất cả ${orders.length} đơn của ${staffName} vào ngày ${closeDate}?\n\nCác đơn sẽ được lưu vào lịch sử và không thể sửa/xóa từ danh sách Đơn đã đi.`
+    );
+
+    if (!confirmed) {
+      return;
+    }
+
+    setIsClosing(true);
+
+    try {
+      const response = await fetch("/api/orders/close", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          staff_name: staffName,
+          closed_date: closeDate,
+        }),
+      });
+
+      const responseText = await response.text();
+
+      let result: {
+        success?: boolean;
+        count?: number;
+        error?: string;
+      } = {};
+
+      try {
+        result = JSON.parse(responseText);
+      } catch {
+        result = {};
+      }
+
+      if (!response.ok) {
+        throw new Error(
+          result.error ||
+            responseText ||
+            "Không thể chốt đơn."
+        );
+      }
+
+      alert(
+        `Đã chốt ${result.count ?? orders.length} đơn của ${staffName}.`
+      );
+
+      window.location.reload();
+    } catch (error) {
+      alert(
+        error instanceof Error
+          ? error.message
+          : "Không thể chốt đơn."
+      );
+      setIsClosing(false);
+    }
+  }
   const totalReceived = orders.reduce((total, order) => {
     const amount = Number(order.amount || 0);
     const tip = Number(order.tip || 0);
@@ -618,6 +702,68 @@ function OrderEditor({
         </div>
       )}
 
+      {staffName && orders.length > 0 && (
+        <div
+          style={{
+            marginTop: "16px",
+            padding: "16px",
+            borderRadius: "12px",
+            border: "1px solid #dbe4f0",
+            background: "#f8fafc",
+          }}
+        >
+          <div
+            style={{
+              fontWeight: 800,
+              fontSize: "15px",
+              marginBottom: "6px",
+            }}
+          >
+            Chốt đơn {staffName}
+          </div>
+
+          <div
+            style={{
+              color: "#64748b",
+              fontSize: "13px",
+              marginBottom: "12px",
+            }}
+          >
+            Lưu toàn bộ đơn hiện tại vào lịch sử Lương tháng.
+            Sau khi chốt, các đơn này sẽ không còn xuất hiện trong Đơn đã đi.
+          </div>
+
+          <div
+            style={{
+              display: "flex",
+              gap: "10px",
+              alignItems: "end",
+              flexWrap: "wrap",
+            }}
+          >
+            <div className="order-field">
+              <label>Ngày chốt</label>
+              <input
+                type="date"
+                value={closeDate}
+                onChange={(e) => setCloseDate(e.target.value)}
+                disabled={isClosing}
+              />
+            </div>
+
+            <button
+              type="button"
+              className="primary-btn"
+              onClick={closeAllOrders}
+              disabled={isClosing}
+            >
+              {isClosing
+                ? "ĐANG CHỐT..."
+                : `LƯU & CHỐT TẤT CẢ ĐƠN CỦA ${staffName}`}
+            </button>
+          </div>
+        </div>
+      )}
       <div className="total-bar">
         <span>
           Tổng số:{" "}

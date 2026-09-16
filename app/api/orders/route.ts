@@ -115,7 +115,8 @@ let query = admin
   })
   .order("created_at", {
     ascending: false,
-  });
+  })
+  .eq("is_closed", false);
 
     // STAFF chỉ xem đơn của chính mình
     if (profile.role === "staff") {
@@ -487,6 +488,27 @@ async function updateOrder(
       id
     );
 
+    const admin =
+      createAdminClient();
+
+    const { data: existingOrder, error: existingOrderError } = await admin
+      .from("orders")
+      .select("id, is_closed")
+      .eq("id", id)
+      .maybeSingle();
+
+    if (existingOrderError) {
+      console.error("UPDATE /api/orders CHECK ERROR:", existingOrderError);
+      return jsonError("Không thể kiểm tra trạng thái đơn.", 500);
+    }
+
+    if (existingOrder?.is_closed === true) {
+      return jsonError(
+        "Đơn đã chốt, không thể sửa.",
+        409
+      );
+    }
+
     const updateData:
       Record<string, unknown> = {};
 
@@ -662,9 +684,6 @@ async function updateOrder(
       "UPDATE /api/orders DATA:",
       updateData
     );
-
-    const admin =
-      createAdminClient();
 
 let {
   data,
@@ -971,6 +990,7 @@ export async function DELETE(
         .from("orders")
         .delete()
         .eq("id", id)
+        .eq("is_closed", false)
         .select()
         .maybeSingle();
 
@@ -1033,6 +1053,7 @@ export async function DELETE(
       .eq("staff_name", staffName)
       .eq("order_code", orderCode)
       .eq("order_type", orderType)
+      .eq("is_closed", false)
       .limit(2);
 
     if (findError) {

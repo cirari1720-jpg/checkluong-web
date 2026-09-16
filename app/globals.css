@@ -709,11 +709,6 @@ body {
   margin-bottom: 12px;
 }
 
-.staff-readonly-item > div:first-child > div {
-  margin-top: 0 !important;
-  height: 100%;
-  box-sizing: border-box;
-}
 
 .staff-salary-panel {
   padding: 14px 16px;
@@ -808,5 +803,56 @@ body {
 @media (max-width: 800px) {
   .staff-readonly-item {
     grid-template-columns: 1fr;
+  }
+}
+@media (max-width: 800px) {
+  .staff-readonly-item {
+    display: block;
+    padding: 14px;
+  }
+
+  .staff-order-info {
+    width: 100%;
+  }
+
+  .staff-order-title {
+    font-size: 19px;
+    margin-bottom: 14px;
+  }
+
+  .staff-order-code {
+    font-size: 16px;
+    margin-bottom: 10px;
+  }
+
+  .staff-salary-panel {
+    margin-top: 14px;
+    padding: 14px;
+  }
+
+  .staff-salary-title {
+    font-size: 18px;
+  }
+
+  .staff-order-row {
+    font-size: 15px;
+    gap: 10px;
+  }
+
+  .staff-order-row b {
+    font-size: 16px;
+  }
+
+  .staff-order-total {
+    padding: 12px;
+    gap: 8px;
+  }
+
+  .staff-order-total span {
+    font-size: 15px;
+  }
+
+  .staff-order-total b {
+    font-size: 21px;
   }
 }

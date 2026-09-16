@@ -1003,10 +1003,14 @@ body {
 }
 
 .staff-order-chevron {
-  font-size: 27px;
-  line-height: 1;
-  color: #0f172a;
-  font-weight: 800;
+  width: 10px;
+  height: 10px;
+  flex: 0 0 10px;
+  border-right: 2px solid #17213f;
+  border-bottom: 2px solid #17213f;
+  transform: rotate(45deg) translateY(-2px);
+  transition: transform 0.22s ease, border-color 0.22s ease;
+  margin-right: 4px;
 }
 
 .staff-order-details {
@@ -1126,8 +1130,15 @@ body {
   }
 
   .staff-order-chevron {
-    font-size: 22px;
-  }
+  width: 10px;
+  height: 10px;
+  flex: 0 0 10px;
+  border-right: 2px solid #17213f;
+  border-bottom: 2px solid #17213f;
+  transform: rotate(45deg) translateY(-2px);
+  transition: transform 0.22s ease, border-color 0.22s ease;
+  margin-right: 4px;
+}
 
   .staff-order-details {
     grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
@@ -1183,4 +1194,8 @@ body {
   .staff-order-total b {
     font-size: 15px;
   }
+}
+
+.staff-order-chevron.is-open {
+  transform: rotate(225deg) translateY(-2px);
 }

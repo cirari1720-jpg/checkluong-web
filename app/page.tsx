@@ -761,9 +761,7 @@ function ReadonlyOrders({
                     <span className="staff-order-status">
                       {"\u0110\u00e3 ho\u00e0n th\u00e0nh"}
                     </span>
-                    <span className="staff-order-chevron">
-                      {isOpen ? "\u2303" : "\u2304"}
-                    </span>
+                    <span className={`staff-order-chevron ${isOpen ? "is-open" : ""}`} aria-hidden="true" />
                   </div>
                 </button>
 

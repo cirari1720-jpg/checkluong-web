@@ -102,6 +102,7 @@ type Order = {
   order_code: string;  // mã đơn hiển thị
   amount: number;
   tip: number;
+  staff_per_order: number;
 };
 
 /* =========================================================
@@ -347,24 +348,24 @@ function OrderEditor({
   onChange: (orders: Order[]) => void;
 }) {
   function addOrder() {
-  const newOrder: Order = {
-    id: `new-${Date.now()}`,
-    order_code: `Đơn ${orders.length + 1}`,
-    amount: 0,
-    tip: 0,
-  };
+    const newOrder: Order = {
+      id: `new-${Date.now()}`,
+      order_code: `Đơn ${orders.length + 1}`,
+      amount: 0,
+      tip: 0,
+      staff_per_order: 1,
+    };
 
-  onChange([
-    ...orders,
-    newOrder,
-  ]);
-}
-
- function updateOrder(
-  index: number,
-  field: keyof Order,
-  value: string
-) {
+    onChange([
+      ...orders,
+      newOrder,
+    ]);
+  }
+  function updateOrder(
+    index: number,
+    field: keyof Order,
+    value: string
+  ) {
   const next = [...orders];
 
   if (field === "amount") {
@@ -378,6 +379,14 @@ function OrderEditor({
     next[index] = {
       ...next[index],
       tip: Number(value) || 0,
+    };
+  }
+
+  if (field === "staff_per_order") {
+    next[index] = {
+      ...next[index],
+      staff_per_order:
+        Math.max(1, Number(value) || 1),
     };
   }
 
@@ -415,7 +424,8 @@ function OrderEditor({
           <p>{description}</p>
         </div>
 
-        <button
+
+<button
           className="primary-btn"
           onClick={addOrder}
         >
@@ -488,7 +498,24 @@ function OrderEditor({
                   />
                 </div>
 
-                <button
+                                <div className="order-field">
+                  <label>Staff/đơn</label>
+                  <input
+                    type="number"
+                    min="1"
+                    step="1"
+                    value={order.staff_per_order ?? 1}
+                    onChange={(e) =>
+                      updateOrder(
+                        index,
+                        "staff_per_order",
+                        e.target.value
+                      )
+                    }
+                    placeholder="Số staff tham gia đơn"
+                  />
+                </div>
+<button
                   className="danger-btn"
                   onClick={() =>
                     deleteOrder(index)
@@ -1367,6 +1394,7 @@ if (Array.isArray(orders)) {
       order_code: String(order.order_code ?? ""),
       amount: Number(order.amount ?? 0),
       tip: Number(order.tip ?? 0),
+      staff_per_order: Number(order.staff_per_order ?? 1),
     };
     /*
      * order_type = "page"
@@ -1793,6 +1821,9 @@ for (const order of newStaffOrders) {
           tip:
             Number(order.tip || 0),
 
+          staff_per_order:
+            Number(order.staff_per_order || 1),
+
           note: "",
 
           order_type:
@@ -1924,6 +1955,9 @@ const tipChanged =
   Number(oldOrder.tip || 0) !==
   Number(order.tip || 0);
 
+const staffPerOrderChanged =
+  Number(oldOrder.staff_per_order || 1) !==
+  Number(order.staff_per_order || 1);
 const codeChanged =
   String(
     oldOrder.order_code ?? ""
@@ -1935,7 +1969,8 @@ const codeChanged =
 if (
   !amountChanged &&
   !tipChanged &&
-  !codeChanged
+  !codeChanged &&
+  !staffPerOrderChanged
 ) {
   continue;
 }
@@ -1978,6 +2013,9 @@ amount:
 
 tip:
   Number(order.tip || 0),
+
+        staff_per_order:
+          Number(order.staff_per_order || 1),
 
 order_type:
   "staff",

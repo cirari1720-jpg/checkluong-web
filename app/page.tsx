@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useEffect, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
@@ -681,7 +681,7 @@ function ReadonlyOrders({
         </div>
 
         <span className="readonly">
-          "TRA CỨU THÔNG TIN"
+          TRA CỨU THÔNG TIN
         </span>
       </div>
 

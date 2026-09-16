@@ -574,7 +574,7 @@ body {
 
 .order-item {
   display: grid;
-  grid-template-columns: 36px minmax(180px, 1fr) 150px 130px 130px 90px;
+  grid-template-columns: 36px minmax(180px, 1fr) 150px 130px 130px 90px !important;
   align-items: end;
   gap: 12px;
 

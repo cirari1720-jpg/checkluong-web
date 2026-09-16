@@ -761,7 +761,7 @@ function ReadonlyOrders({
                     <span className="staff-order-status">
                       {"\u0110\u00e3 ho\u00e0n th\u00e0nh"}
                     </span>
-                    <span className={`staff-order-chevron ${isOpen ? "is-open" : ""}`} aria-hidden="true"><svg viewBox="0 0 24 24" fill="none"><path d="M6 9l6 6 6-6" /></svg></span>
+                    <span className="staff-order-chevron" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none"><path d={isOpen ? "M6 15l6-6 6 6" : "M6 9l6 6 6-6"} /></svg></span>
                   </div>
                 </button>
 

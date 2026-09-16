@@ -1247,3 +1247,9 @@ body {
 .staff-order-chevron.is-open svg {
   transform: rotate(180deg);
 }
+/* Chevron: đổi hướng, không xoay */
+.staff-order-chevron,
+.staff-order-chevron.is-open,
+.staff-order-chevron svg {
+  transform: none !important;
+}

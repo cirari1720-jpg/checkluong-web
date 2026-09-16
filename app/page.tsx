@@ -3030,7 +3030,14 @@ for (const oldPenalty of oldPenalties) {
 ======================================================= */
 
 const totalOrderMoney =
-  orderMoney(allOrders);
+  viewingPerson
+    ? viewingPerson.staffOrders.reduce((total, order) => {
+        const amount = Number(order.amount || 0);
+        const tip = Number(order.tip || 0);
+        const staffPerOrder = Math.max(1, Number(order.staff_per_order || 1));
+        return total + ((amount * 0.8) + tip) / staffPerOrder;
+      }, 0)
+    : orderMoney(allOrders);
 
 const totalPenaltyMoney =
   totalPenalty(viewingPerson);

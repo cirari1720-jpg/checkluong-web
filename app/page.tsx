@@ -342,12 +342,21 @@ function OrderEditor({
   description,
   orders,
   onChange,
+  staffName,
 }: {
   title: string;
   description: string;
   orders: Order[];
   onChange: (orders: Order[]) => void;
+  staffName?: string;
 }) {
+  const totalReceived = orders.reduce((total, order) => {
+    const amount = Number(order.amount || 0);
+    const tip = Number(order.tip || 0);
+    const staffPerOrder = Math.max(1, Number(order.staff_per_order || 1));
+    return total + ((amount * 0.8) + tip) / staffPerOrder;
+  }, 0);
+
   function addOrder() {
     const newOrder: Order = {
       id: `new-${Date.now()}`,
@@ -618,7 +627,7 @@ function OrderEditor({
         <span>
           Tổng tiền:{" "}
           <b>
-            {money(orderMoney(orders))}
+            {money(totalReceived)}
           </b>
         </span>
       </div>
@@ -3567,6 +3576,7 @@ const totalKpiValue =
                   title="Đơn đã đi"
                   description="Admin có thể thêm, sửa hoặc xóa đơn Staff đã đi."
                   orders={staffOrders}
+                  staffName={viewingName}
                   onChange={(orders) => {
                     updatePerson(
                       (person) => ({

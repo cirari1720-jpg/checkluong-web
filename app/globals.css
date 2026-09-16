@@ -682,3 +682,131 @@ body {
   text-shadow: 0 2px 0 #ffffff, 0 4px 0 #d9def0, 0 7px 12px rgba(80, 90, 180, 0.35), 0 12px 22px rgba(80, 90, 180, 0.18);
 }
 
+
+/* =========================
+   STAFF READONLY - SALARY
+========================= */
+.staff-readonly-item {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(280px, 0.9fr);
+  gap: 18px;
+  align-items: stretch;
+  padding: 16px;
+  border: 1px solid #e1e7f5;
+  border-radius: 14px;
+  background: #fff;
+  margin-bottom: 12px;
+}
+
+.staff-readonly-item > div:first-child {
+  min-width: 0;
+}
+
+.staff-readonly-item > div:first-child > span {
+  display: block;
+  font-weight: 800;
+  font-size: 15px;
+  margin-bottom: 12px;
+}
+
+.staff-readonly-item > div:first-child > div {
+  margin-top: 0 !important;
+  height: 100%;
+  box-sizing: border-box;
+}
+
+.staff-salary-panel {
+  padding: 14px 16px;
+  border-radius: 12px;
+  background: #f8faff;
+  border: 1px solid #e1e7f5;
+}
+
+.staff-salary-title {
+  font-size: 15px;
+  font-weight: 800;
+  margin-bottom: 10px;
+}
+
+@media (max-width: 800px) {
+  .staff-readonly-item {
+    grid-template-columns: 1fr;
+  }
+}
+.staff-order-title {
+  font-size: 20px;
+  font-weight: 800;
+  color: #0f1b4d;
+  margin-bottom: 18px;
+}
+
+.staff-order-code {
+  font-size: 17px;
+  font-weight: 800;
+  color: #111827;
+  margin-bottom: 14px;
+}
+
+.staff-order-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 8px 0;
+  font-size: 16px;
+  color: #17213f;
+}
+
+.staff-order-row b {
+  font-size: 17px;
+  color: #111827;
+  text-align: right;
+}
+
+.staff-salary-panel {
+  padding: 18px 20px;
+  border-radius: 14px;
+  background: #f8faff;
+  border: 1px solid #dce5f5;
+}
+
+.staff-salary-title {
+  font-size: 20px;
+  font-weight: 800;
+  color: #0f1b4d;
+  margin-bottom: 14px;
+}
+
+.staff-salary-panel .staff-order-row {
+  padding: 9px 0;
+}
+
+.staff-salary-panel .staff-order-row b {
+  font-size: 18px;
+}
+
+.staff-order-total {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin-top: 14px;
+  padding: 14px 16px;
+  border: 1px solid #c9dbff;
+  border-radius: 12px;
+  background: #edf4ff;
+  color: #1647ad;
+  font-size: 17px;
+  font-weight: 800;
+}
+
+.staff-order-total b {
+  font-size: 25px;
+  color: #1647ad;
+}
+
+@media (max-width: 800px) {
+  .staff-readonly-item {
+    grid-template-columns: 1fr;
+  }
+}

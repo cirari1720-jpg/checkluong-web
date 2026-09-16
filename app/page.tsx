@@ -644,11 +644,13 @@ function ReadonlyOrders({
   description,
   orders,
   showSalaryDetails = false,
+  staffName,
 }: {
   title: string;
   description: string;
   orders: Order[];
   showSalaryDetails?: boolean;
+  staffName?: string;
 }) {
   return (
     <section className="card">
@@ -685,81 +687,77 @@ function ReadonlyOrders({
 
             return (
               <div
-                className="readonly-item"
+                className={showSalaryDetails ? "staff-readonly-item" : "readonly-item"}
                 key={`${order.id}-${index}`}
               >
-                <div>
-                  <span>
-                    {index + 1}.{" "}
-                    {order.order_code}
-                  </span>
+                {showSalaryDetails ? (
+                  <>
+                    <div className="staff-order-info">
+                      <div className="staff-order-title">
+                        {"Thông tin đơn"}
+                      </div>
+                      <div className="staff-order-code">
+                        {index + 1}. {order.order_code}
+                      </div>
+                      <div className="staff-order-row">
+                        <span>{"Tiền đơn"}</span>
+                        <b>{money(amount)}</b>
+                      </div>
+                      <div className="staff-order-row">
+                        <span>{"Ngày đơn"}</span>
+                        <b>{order.order_date || "-"}</b>
+                      </div>
+                      <div className="staff-order-row">
+                        <span>{"Staff/đơn"}</span>
+                        <b>{staffPerOrder} {"người"}</b>
+                      </div>
+                      <div className="staff-order-row">
+                        <span>{"Tip"}</span>
+                        <b>{money(tip)}</b>
+                      </div>
+                    </div>
 
-                  {!showSalaryDetails ? (
+                    <div className="staff-salary-panel">
+                      <div className="staff-salary-title">
+                        {"Phần của bạn"}{staffName ? ` (${staffName})` : ""}
+                      </div>
+                      <div className="staff-order-row">
+                        <span>{"Khấu trừ 20%"}</span>
+                        <b>{money(deduction20)}</b>
+                      </div>
+                      <div className="staff-order-row">
+                        <span>{"Tiền sau khấu trừ"}</span>
+                        <b>{money(afterDeduction)}</b>
+                      </div>
+                      <div className="staff-order-row">
+                        <span>{"Tiền đơn được chia"}</span>
+                        <b>{money(staffAmount)}</b>
+                      </div>
+                      <div className="staff-order-row">
+                        <span>{"Tip được chia"}</span>
+                        <b>{money(staffTip)}</b>
+                      </div>
+                      <div className="staff-order-total">
+                        <span>{"TỔNG BẠN NHẬN"}</span>
+                        <b>{money(staffTotal)}</b>
+                      </div>
+                    </div>
+                  </>
+                ) : (
+                  <div>
+                    <span>
+                      {index + 1}.{" "}
+                      {order.order_code}
+                    </span>
                     <div style={{ marginTop: 4, fontSize: 14 }}>
-                      {"Ti\u1ec1n \u0111\u01a1n: "}
+                      {"Tiền đơn: "}
                       <b>{money(amount)}</b>
-                      {" \u00b7 "}
+                      {" · "}
                       {"Tip: "}
                       <b>{money(tip)}</b>
                     </div>
-                  ) : (
-                    <div
-                      style={{
-                        marginTop: 10,
-                        padding: "12px 14px",
-                        borderRadius: 10,
-                        background: "#f8faff",
-                        border: "1px solid #e1e7f5",
-                        fontSize: 14,
-                        lineHeight: 1.8,
-                      }}
-                    >
-                      <div>
-                        {"Ti\u1ec1n \u0111\u01a1n: "}
-                        <b>{money(amount)}</b>
-                      </div>
-
-                      <div>
-                        {"Kh\u1ea5u tr\u1eeb 20%: "}
-                        <b>{money(deduction20)}</b>
-                      </div>
-
-                      <div>
-                        {"Ti\u1ec1n sau kh\u1ea5u tr\u1eeb: "}
-                        <b>{money(afterDeduction)}</b>
-                      </div>
-
-                      <div>
-                        {"Staff/\u0111\u01a1n: "}
-                        <b>{staffPerOrder}</b>
-                      </div>
-
-                      <div>
-                        {"Ti\u1ec1n \u0111\u01b0\u1ee3c nh\u1eadn: "}
-                        <b>{money(staffAmount)}</b>
-                      </div>
-
-                      <div>
-                        {"Tip \u0111\u01b0\u1ee3c chia: "}
-                        <b>{money(staffTip)}</b>
-                      </div>
-
-                      <div
-                        style={{
-                          marginTop: 6,
-                          paddingTop: 6,
-                          borderTop: "1px solid #dbe3f2",
-                          fontSize: 15,
-                        }}
-                      >
-                        <b>
-                          {"T\u1ed4NG NH\u1eacN: "}
-                          {money(staffTotal)}
-                        </b>
-                      </div>
-                    </div>
-                  )}
-                </div>
+                  </div>
+                )}
               </div>
             );
           })}
@@ -777,22 +775,22 @@ function ReadonlyOrders({
           <b>
             {money(
               orders.reduce(
-                (total, order) =>
-                  total +
-                  Number(order.amount || 0) +
-                  Number(order.tip || 0),
+                (total, order) => {
+                  const amount = Number(order.amount || 0);
+                  const tip = Number(order.tip || 0);
+                  const staffPerOrder = Math.max(1, Number(order.staff_per_order || 1));
+                  return total + ((amount * 0.8) + tip) / staffPerOrder;
+                },
                 0
               )
             )}
           </b>
         </span>
       </div>
+
     </section>
   );
 }
-/* =========================================================
-   KPI EDITOR
-========================================================= */
 
 function KpiEditor({
   person,
@@ -824,14 +822,14 @@ function KpiEditor({
     <section className="card">
       <div className="section-title-row">
         <div>
-          <h2>Điểm KPI</h2>
+          <h2>─Éiß╗âm KPI</h2>
           <p>
-            Admin được quyền cập nhật điểm.
+            Admin ─æ╞░ß╗úc quyß╗ün cß║¡p nhß║¡t ─æiß╗âm.
           </p>
         </div>
 
         <span className="admin-badge">
-          🔐 ADMIN
+          ≡ƒöÉ ADMIN
         </span>
       </div>
 
@@ -860,7 +858,7 @@ function KpiEditor({
       </div>
 
       <div className="highlight">
-        <span>TỔNG ĐIỂM KPI</span>
+        <span>Tß╗öNG ─ÉIß╗éM KPI</span>
 
         <strong>
           {pageOnly
@@ -920,15 +918,6 @@ function ReadonlyKpi({
         ))}
       </div>
 
-      <div className="highlight">
-        <span>TỔNG ĐIỂM KPI</span>
-
-        <strong>
-          {pageOnly
-            ? person.kpi.page
-            : totalKpi(person)}
-        </strong>
-      </div>
     </section>
   );
 }
@@ -3592,6 +3581,7 @@ const totalKpiValue =
                   title="Đơn đã đi"
                   description="Danh sách các đơn Staff đã đi." showSalaryDetails
                   orders={staffOrders}
+                  staffName={viewingName}
                 />
               )}
 

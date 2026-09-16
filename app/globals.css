@@ -1003,14 +1003,14 @@ body {
 }
 
 .staff-order-chevron {
-  width: 10px;
-  height: 10px;
-  flex: 0 0 10px;
-  border-right: 2px solid #17213f;
-  border-bottom: 2px solid #17213f;
-  transform: rotate(45deg) translateY(-2px);
-  transition: transform 0.22s ease, border-color 0.22s ease;
-  margin-right: 4px;
+  width: 22px;
+  height: 22px;
+  flex: 0 0 22px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-right: 2px;
+  transition: transform 0.25s ease;
 }
 
 .staff-order-details {
@@ -1130,14 +1130,14 @@ body {
   }
 
   .staff-order-chevron {
-  width: 10px;
-  height: 10px;
-  flex: 0 0 10px;
-  border-right: 2px solid #17213f;
-  border-bottom: 2px solid #17213f;
-  transform: rotate(45deg) translateY(-2px);
-  transition: transform 0.22s ease, border-color 0.22s ease;
-  margin-right: 4px;
+  width: 22px;
+  height: 22px;
+  flex: 0 0 22px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-right: 2px;
+  transition: transform 0.25s ease;
 }
 
   .staff-order-details {
@@ -1198,4 +1198,18 @@ body {
 
 .staff-order-chevron.is-open {
   transform: rotate(225deg) translateY(-2px);
+}
+/* Smooth accordion chevron */
+.staff-order-chevron::before {
+  content: "";
+  width: 8px;
+  height: 8px;
+  border-right: 2px solid #17213f;
+  border-bottom: 2px solid #17213f;
+  transform: rotate(45deg);
+  border-radius: 1px;
+}
+
+.staff-order-chevron.is-open {
+  transform: rotate(180deg);
 }

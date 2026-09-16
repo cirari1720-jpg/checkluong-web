@@ -681,7 +681,7 @@ function ReadonlyOrders({
         </div>
 
         <span className="readonly">
-          {"\ud83d\udd12 CH\u1ec8 XEM"}
+          "TRA C\u1ee8U TH\u00d4NG TIN"
         </span>
       </div>
 

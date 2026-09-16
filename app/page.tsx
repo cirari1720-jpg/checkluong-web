@@ -652,6 +652,26 @@ function ReadonlyOrders({
   showSalaryDetails?: boolean;
   staffName?: string;
 }) {
+  const [openOrders, setOpenOrders] = useState<Record<string, boolean>>({});
+
+  function toggleOrder(orderKey: string) {
+    setOpenOrders((current) => ({
+      ...current,
+      [orderKey]: !current[orderKey],
+    }));
+  }
+
+  const totalReceived = orders.reduce((total, order) => {
+    const amount = Number(order.amount || 0);
+    const tip = Number(order.tip || 0);
+    const staffPerOrder = Math.max(
+      1,
+      Number(order.staff_per_order || 1)
+    );
+
+    return total + ((amount * 0.8) + tip) / staffPerOrder;
+  }, 0);
+
   return (
     <section className="card">
       <div className="section-title-row">
@@ -685,91 +705,131 @@ function ReadonlyOrders({
             const staffTip = tip / staffPerOrder;
             const staffTotal = staffAmount + staffTip;
 
+            const orderKey = `${order.id}-${index}`;
+            const isOpen = openOrders[orderKey] ?? index === 0;
+
+            if (!showSalaryDetails) {
+              return (
+                <div
+                  className="readonly-item"
+                  key={orderKey}
+                >
+                  <span>
+                    {index + 1}.{" "}
+                    {order.order_code}
+                  </span>
+
+                  <div style={{ marginTop: 4, fontSize: 14 }}>
+                    {"Ti\u1ec1n \u0111\u01a1n: "}
+                    <b>{money(amount)}</b>
+                    {" \u00b7 "}
+                    {"Tip: "}
+                    <b>{money(tip)}</b>
+                  </div>
+                </div>
+              );
+            }
+
             return (
               <div
-                className={showSalaryDetails ? "staff-readonly-item" : "readonly-item"}
-                key={`${order.id}-${index}`}
+                className="staff-order-card"
+                key={orderKey}
               >
-                {showSalaryDetails ? (
-  <>
-    <div className="staff-order-info">
-      <div className="staff-order-title">
-        {"\u0054h\u00f4ng tin \u0111\u01a1n"}
-      </div>
+                <button
+                  type="button"
+                  className="staff-order-header"
+                  onClick={() => toggleOrder(orderKey)}
+                  aria-expanded={isOpen}
+                >
+                  <div className="staff-order-header-left">
+                    <div className="staff-order-number">
+                      {index + 1}
+                    </div>
 
-      <div className="staff-order-code">
-        {index + 1}. {order.order_code}
-      </div>
+                    <div>
+                      <div className="staff-order-header-code">
+                        {order.order_code}
+                      </div>
+                      <div className="staff-order-header-date">
+                        {"Ng\u00e0y: "}
+                        {order.order_date || "-"}
+                      </div>
+                    </div>
+                  </div>
 
-      <div className="staff-order-row">
-        <span>{"Ti\u1ec1n \u0111\u01a1n"}</span>
-        <b>{money(amount)}</b>
-      </div>
-
-      <div className="staff-order-row">
-        <span>{"Kh\u1ea5u tr\u1eeb 20%"}</span>
-        <b>{money(deduction20)}</b>
-      </div>
-
-      <div className="staff-order-divider" />
-
-      <div className="staff-order-row">
-        <span>{"Ti\u1ec1n sau kh\u1ea5u tr\u1eeb"}</span>
-        <b>{money(afterDeduction)}</b>
-      </div>
-
-      <div className="staff-order-row">
-        <span>{"Tip"}</span>
-        <b>{money(tip)}</b>
-      </div>
-
-      <div className="staff-order-row">
-        <span>{"Staff/\u0111\u01a1n"}</span>
-        <b>{staffPerOrder} {"ng\u01b0\u1eddi"}</b>
-      </div>
-    </div>
-
-    <div className="staff-salary-panel">
-      <div className="staff-salary-title">
-        {"Ph\u1ea7n c\u1ee7a b\u1ea1n"}{staffName ? ` (${staffName})` : ""}
-      </div>
-
-      <div className="staff-order-row">
-        <span>{"Ti\u1ec1n \u0111\u01a1n \u0111\u01b0\u1ee3c chia"}</span>
-        <b>{money(staffAmount)}</b>
-      </div>
-
-      <div className="staff-share-note">
-        ({money(afterDeduction)} / {staffPerOrder})
-      </div>
-
-      <div className="staff-order-row">
-        <span>{"Tip \u0111\u01b0\u1ee3c chia"}</span>
-        <b>{money(staffTip)}</b>
-      </div>
-
-      <div className="staff-share-note">
-        ({money(tip)} / {staffPerOrder})
-      </div>
-
-      <div className="staff-order-total">
-        <span>{"T\u1ed4NG B\u1ea0N NH\u1eacN"}</span>
-        <b>{money(staffTotal)}</b>
-      </div>
-    </div>
-  </>
-) : (
-                  <div>
-                    <span>
-                      {index + 1}.{" "}
-                      {order.order_code}
+                  <div className="staff-order-header-right">
+                    <span className="staff-order-status">
+                      {"\u0110\u00e3 ho\u00e0n th\u00e0nh"}
                     </span>
-                    <div style={{ marginTop: 4, fontSize: 14 }}>
-                      {"Tiền đơn: "}
-                      <b>{money(amount)}</b>
-                      {" · "}
-                      {"Tip: "}
-                      <b>{money(tip)}</b>
+                    <span className="staff-order-chevron">
+                      {isOpen ? "\u2303" : "\u2304"}
+                    </span>
+                  </div>
+                </button>
+
+                {isOpen && (
+                  <div className="staff-order-details">
+                    <div className="staff-order-info">
+                      <div className="staff-order-title">
+                        {"Th\u00f4ng tin \u0111\u01a1n"}
+                      </div>
+
+                      <div className="staff-order-detail-row">
+                        <span>{"Ti\u1ec1n \u0111\u01a1n"}</span>
+                        <b>{money(amount)}</b>
+                      </div>
+
+                      <div className="staff-order-detail-row">
+                        <span>{"Kh\u1ea5u tr\u1eeb 20%"}</span>
+                        <b>{money(deduction20)}</b>
+                      </div>
+
+                      <div className="staff-order-divider" />
+
+                      <div className="staff-order-detail-row">
+                        <span>{"Ti\u1ec1n sau kh\u1ea5u tr\u1eeb"}</span>
+                        <b>{money(afterDeduction)}</b>
+                      </div>
+
+                      <div className="staff-order-detail-row">
+                        <span>{"Tip"}</span>
+                        <b>{money(tip)}</b>
+                      </div>
+
+                      <div className="staff-order-detail-row">
+                        <span>{"Staff/\u0111\u01a1n"}</span>
+                        <b>{staffPerOrder} {"ng\u01b0\u1eddi"}</b>
+                      </div>
+                    </div>
+
+                    <div className="staff-salary-panel">
+                      <div className="staff-salary-title">
+                        {"Ph\u1ea7n c\u1ee7a b\u1ea1n"}
+                        {staffName ? ` (${staffName})` : ""}
+                      </div>
+
+                      <div className="staff-order-detail-row">
+                        <span>{"Ti\u1ec1n \u0111\u01a1n \u0111\u01b0\u1ee3c chia"}</span>
+                        <b>{money(staffAmount)}</b>
+                      </div>
+
+                      <div className="staff-share-note">
+                        ({money(afterDeduction)} / {staffPerOrder})
+                      </div>
+
+                      <div className="staff-order-detail-row">
+                        <span>{"Tip \u0111\u01b0\u1ee3c chia"}</span>
+                        <b>{money(staffTip)}</b>
+                      </div>
+
+                      <div className="staff-share-note">
+                        ({money(tip)} / {staffPerOrder})
+                      </div>
+
+                      <div className="staff-order-total">
+                        <span>{"T\u1ed4NG B\u1ea0N NH\u1eacN:"}</span>
+                        <b>{money(staffTotal)}</b>
+                      </div>
                     </div>
                   </div>
                 )}
@@ -787,22 +847,9 @@ function ReadonlyOrders({
 
         <span>
           {"T\u1ed5ng ti\u1ec1n: "}
-          <b>
-            {money(
-              orders.reduce(
-                (total, order) => {
-                  const amount = Number(order.amount || 0);
-                  const tip = Number(order.tip || 0);
-                  const staffPerOrder = Math.max(1, Number(order.staff_per_order || 1));
-                  return total + ((amount * 0.8) + tip) / staffPerOrder;
-                },
-                0
-              )
-            )}
-          </b>
+          <b>{money(totalReceived)}</b>
         </span>
       </div>
-
     </section>
   );
 }

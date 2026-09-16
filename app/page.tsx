@@ -691,59 +691,74 @@ function ReadonlyOrders({
                 key={`${order.id}-${index}`}
               >
                 {showSalaryDetails ? (
-                  <>
-                    <div className="staff-order-info">
-                      <div className="staff-order-title">
-                        {"Thông tin đơn"}
-                      </div>
-                      <div className="staff-order-code">
-                        {index + 1}. {order.order_code}
-                      </div>
-                      <div className="staff-order-row">
-                        <span>{"Tiền đơn"}</span>
-                        <b>{money(amount)}</b>
-                      </div>
-                      <div className="staff-order-row">
-                        <span>{"Ngày đơn"}</span>
-                        <b>{order.order_date || "-"}</b>
-                      </div>
-                      <div className="staff-order-row">
-                        <span>{"Staff/đơn"}</span>
-                        <b>{staffPerOrder} {"người"}</b>
-                      </div>
-                      <div className="staff-order-row">
-                        <span>{"Tip"}</span>
-                        <b>{money(tip)}</b>
-                      </div>
-                    </div>
+  <>
+    <div className="staff-order-info">
+      <div className="staff-order-title">
+        {"\u0054h\u00f4ng tin \u0111\u01a1n"}
+      </div>
 
-                    <div className="staff-salary-panel">
-                      <div className="staff-salary-title">
-                        {"Phần của bạn"}{staffName ? ` (${staffName})` : ""}
-                      </div>
-                      <div className="staff-order-row">
-                        <span>{"Khấu trừ 20%"}</span>
-                        <b>{money(deduction20)}</b>
-                      </div>
-                      <div className="staff-order-row">
-                        <span>{"Tiền sau khấu trừ"}</span>
-                        <b>{money(afterDeduction)}</b>
-                      </div>
-                      <div className="staff-order-row">
-                        <span>{"Tiền đơn được chia"}</span>
-                        <b>{money(staffAmount)}</b>
-                      </div>
-                      <div className="staff-order-row">
-                        <span>{"Tip được chia"}</span>
-                        <b>{money(staffTip)}</b>
-                      </div>
-                      <div className="staff-order-total">
-                        <span>{"TỔNG BẠN NHẬN"}</span>
-                        <b>{money(staffTotal)}</b>
-                      </div>
-                    </div>
-                  </>
-                ) : (
+      <div className="staff-order-code">
+        {index + 1}. {order.order_code}
+      </div>
+
+      <div className="staff-order-row">
+        <span>{"Ti\u1ec1n \u0111\u01a1n"}</span>
+        <b>{money(amount)}</b>
+      </div>
+
+      <div className="staff-order-row">
+        <span>{"Kh\u1ea5u tr\u1eeb 20%"}</span>
+        <b>{money(deduction20)}</b>
+      </div>
+
+      <div className="staff-order-divider" />
+
+      <div className="staff-order-row">
+        <span>{"Ti\u1ec1n sau kh\u1ea5u tr\u1eeb"}</span>
+        <b>{money(afterDeduction)}</b>
+      </div>
+
+      <div className="staff-order-row">
+        <span>{"Tip"}</span>
+        <b>{money(tip)}</b>
+      </div>
+
+      <div className="staff-order-row">
+        <span>{"Staff/\u0111\u01a1n"}</span>
+        <b>{staffPerOrder} {"ng\u01b0\u1eddi"}</b>
+      </div>
+    </div>
+
+    <div className="staff-salary-panel">
+      <div className="staff-salary-title">
+        {"Ph\u1ea7n c\u1ee7a b\u1ea1n"}{staffName ? ` (${staffName})` : ""}
+      </div>
+
+      <div className="staff-order-row">
+        <span>{"Ti\u1ec1n \u0111\u01a1n \u0111\u01b0\u1ee3c chia"}</span>
+        <b>{money(staffAmount)}</b>
+      </div>
+
+      <div className="staff-share-note">
+        ({money(afterDeduction)} / {staffPerOrder})
+      </div>
+
+      <div className="staff-order-row">
+        <span>{"Tip \u0111\u01b0\u1ee3c chia"}</span>
+        <b>{money(staffTip)}</b>
+      </div>
+
+      <div className="staff-share-note">
+        ({money(tip)} / {staffPerOrder})
+      </div>
+
+      <div className="staff-order-total">
+        <span>{"T\u1ed4NG B\u1ea0N NH\u1eacN"}</span>
+        <b>{money(staffTotal)}</b>
+      </div>
+    </div>
+  </>
+) : (
                   <div>
                     <span>
                       {index + 1}.{" "}

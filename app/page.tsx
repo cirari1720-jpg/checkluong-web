@@ -103,6 +103,7 @@ type Order = {
   amount: number;
   tip: number;
   staff_per_order: number;
+  order_date: string;
 };
 
 /* =========================================================
@@ -354,6 +355,7 @@ function OrderEditor({
       amount: 0,
       tip: 0,
       staff_per_order: 1,
+      order_date: "",
     };
 
     onChange([
@@ -499,6 +501,14 @@ function OrderEditor({
                 </div>
 
                                 <div className="order-field">
+          <label>Ngày đơn</label>
+          <input
+            type="date"
+            value={order.order_date}
+            onChange={(e) => updateOrder(index, "order_date", e.target.value)}
+          />
+        </div>
+        <div className="order-field">
                   <label>Staff/đơn</label>
                   <input
                     type="number"
@@ -624,10 +634,12 @@ function ReadonlyOrders({
   title,
   description,
   orders,
+  showSalaryDetails = false,
 }: {
   title: string;
   description: string;
   orders: Order[];
+  showSalaryDetails?: boolean;
 }) {
   return (
     <section className="card">
@@ -638,18 +650,31 @@ function ReadonlyOrders({
         </div>
 
         <span className="readonly">
-          🔒 CHỈ XEM
+          {"\ud83d\udd12 CH\u1ec8 XEM"}
         </span>
       </div>
 
       {orders.length === 0 ? (
         <div className="empty">
-          Chưa có đơn nào.
+          {"Ch\u01b0a c\u00f3 \u0111\u01a1n n\u00e0o."}
         </div>
       ) : (
         <div className="readonly-list">
-          {orders.map(
-            (order, index) => (
+          {orders.map((order, index) => {
+            const amount = Number(order.amount) || 0;
+            const tip = Number(order.tip) || 0;
+            const staffPerOrder = Math.max(
+              1,
+              Number(order.staff_per_order) || 1
+            );
+
+            const deduction20 = amount * 0.2;
+            const afterDeduction = amount * 0.8;
+            const staffAmount = afterDeduction / staffPerOrder;
+            const staffTip = tip / staffPerOrder;
+            const staffTotal = staffAmount + staffTip;
+
+            return (
               <div
                 className="readonly-item"
                 key={`${order.id}-${index}`}
@@ -660,35 +685,102 @@ function ReadonlyOrders({
                     {order.order_code}
                   </span>
 
-                  <div style={{ marginTop: 4, fontSize: 14 }}>
-                    Tiền đơn: <b>{money(order.amount)}</b>
-                    {" · "}
-                    Tip: <b>{money(order.tip)}</b>
-                  </div>
+                  {!showSalaryDetails ? (
+                    <div style={{ marginTop: 4, fontSize: 14 }}>
+                      {"Ti\u1ec1n \u0111\u01a1n: "}
+                      <b>{money(amount)}</b>
+                      {" \u00b7 "}
+                      {"Tip: "}
+                      <b>{money(tip)}</b>
+                    </div>
+                  ) : (
+                    <div
+                      style={{
+                        marginTop: 10,
+                        padding: "12px 14px",
+                        borderRadius: 10,
+                        background: "#f8faff",
+                        border: "1px solid #e1e7f5",
+                        fontSize: 14,
+                        lineHeight: 1.8,
+                      }}
+                    >
+                      <div>
+                        {"Ti\u1ec1n \u0111\u01a1n: "}
+                        <b>{money(amount)}</b>
+                      </div>
+
+                      <div>
+                        {"Kh\u1ea5u tr\u1eeb 20%: "}
+                        <b>{money(deduction20)}</b>
+                      </div>
+
+                      <div>
+                        {"Ti\u1ec1n sau kh\u1ea5u tr\u1eeb: "}
+                        <b>{money(afterDeduction)}</b>
+                      </div>
+
+                      <div>
+                        {"Staff/\u0111\u01a1n: "}
+                        <b>{staffPerOrder}</b>
+                      </div>
+
+                      <div>
+                        {"Ti\u1ec1n \u0111\u01b0\u1ee3c nh\u1eadn: "}
+                        <b>{money(staffAmount)}</b>
+                      </div>
+
+                      <div>
+                        {"Tip \u0111\u01b0\u1ee3c chia: "}
+                        <b>{money(staffTip)}</b>
+                      </div>
+
+                      <div
+                        style={{
+                          marginTop: 6,
+                          paddingTop: 6,
+                          borderTop: "1px solid #dbe3f2",
+                          fontSize: 15,
+                        }}
+                      >
+                        <b>
+                          {"T\u1ed4NG NH\u1eacN: "}
+                          {money(staffTotal)}
+                        </b>
+                      </div>
+                    </div>
+                  )}
                 </div>
               </div>
-            )
-          )}
+            );
+          })}
         </div>
       )}
 
       <div className="total-bar">
         <span>
-          Tổng số:{" "}
+          {"T\u1ed5ng s\u1ed1: "}
           <b>{orders.length}</b>
         </span>
 
         <span>
-          Tổng tiền:{" "}
+          {"T\u1ed5ng ti\u1ec1n: "}
           <b>
-            {money(orderMoney(orders))}
+            {money(
+              orders.reduce(
+                (total, order) =>
+                  total +
+                  Number(order.amount || 0) +
+                  Number(order.tip || 0),
+                0
+              )
+            )}
           </b>
         </span>
       </div>
     </section>
   );
 }
-
 /* =========================================================
    KPI EDITOR
 ========================================================= */
@@ -1465,6 +1557,7 @@ if (Array.isArray(orders)) {
       amount: Number(order.amount ?? 0),
       tip: Number(order.tip ?? 0),
       staff_per_order: Number(order.staff_per_order ?? 1),
+      order_date: String(order.order_date ?? ""),
     };
     /*
      * order_type = "page"
@@ -1871,10 +1964,7 @@ for (const order of newStaffOrders) {
         },
 
         body: JSON.stringify({
-          order_date:
-            new Date()
-              .toISOString()
-              .split("T")[0],
+          order_date: order.order_date,
 
           order_code:
             order.order_code,
@@ -2028,6 +2118,10 @@ const tipChanged =
 const staffPerOrderChanged =
   Number(oldOrder.staff_per_order || 1) !==
   Number(order.staff_per_order || 1);
+
+const dateChanged =
+  String(oldOrder.order_date ?? "") !==
+  String(order.order_date ?? "");
 const codeChanged =
   String(
     oldOrder.order_code ?? ""
@@ -2040,7 +2134,8 @@ if (
   !amountChanged &&
   !tipChanged &&
   !codeChanged &&
-  !staffPerOrderChanged
+  !staffPerOrderChanged &&
+  !dateChanged
 ) {
   continue;
 }
@@ -2086,6 +2181,9 @@ tip:
 
         staff_per_order:
           Number(order.staff_per_order || 1),
+
+order_date:
+  order.order_date,
 
 order_type:
   "staff",
@@ -2286,10 +2384,7 @@ for (const oldOrder of oldStaffOrders) {
                 "application/json",
             },
             body: JSON.stringify({
-              order_date:
-                new Date()
-                  .toISOString()
-                  .split("T")[0],
+              order_date: order.order_date,
 
               order_code:
                 order.id,
@@ -3485,7 +3580,7 @@ const totalKpiValue =
               ) : (
                 <ReadonlyOrders
                   title="Đơn đã đi"
-                  description="Danh sách các đơn Staff đã đi."
+                  description="Danh sách các đơn Staff đã đi." showSalaryDetails
                   orders={staffOrders}
                 />
               )}

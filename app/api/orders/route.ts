@@ -1,4 +1,4 @@
-﻿import { NextRequest, NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
@@ -246,6 +246,15 @@ export async function POST(
       );
     }
 
+    if (
+      !order_date ||
+      !String(order_date).trim()
+    ) {
+      return jsonError(
+        "Vui lòng nhập ngày đơn."
+      );
+    }
+
     const parsedAmount =
       Number(amount ?? 0);
 
@@ -291,11 +300,7 @@ export async function POST(
     } = await admin
       .from("orders")
       .insert({
-        order_date:
-          order_date ||
-          new Date()
-            .toISOString()
-            .split("T")[0],
+        order_date: order_date,
 
         order_code:
           String(order_code).trim(),

@@ -246,15 +246,11 @@ export async function POST(
         "Vui lòng nhập mã đơn."
       );
     }
-
-    if (
-      !order_date ||
-      !String(order_date).trim()
-    ) {
-      return jsonError(
-        "Vui lòng nhập ngày đơn."
-      );
-    }
+    const normalizedOrderDate =
+      order_date &&
+      String(order_date).trim()
+        ? String(order_date).trim()
+        : new Date().toISOString().slice(0, 10);
 
     const parsedAmount =
       Number(amount ?? 0);
@@ -301,7 +297,7 @@ export async function POST(
     } = await admin
       .from("orders")
       .insert({
-        order_date: order_date,
+        order_date: normalizedOrderDate,
 
         order_code:
           String(order_code).trim(),
@@ -512,22 +508,14 @@ async function updateOrder(
     const updateData:
       Record<string, unknown> = {};
 
-    if (
-      order_dateIsProvided(body)
-    ) {
+    if (order_dateIsProvided(body)) {
       const value =
-        String(
-          body.order_date
-        ).trim();
+        String(body.order_date ?? "").trim();
 
-      if (!value) {
-        return jsonError(
-          "Ngày đơn không được để trống."
-        );
+      // Ngày rỗng khi sửa đơn cũ: giữ nguyên ngày hiện có.
+      if (value) {
+        updateData.order_date = value;
       }
-
-      updateData.order_date =
-        value;
     }
 
     if (

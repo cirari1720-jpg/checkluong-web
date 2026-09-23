@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from "next/server";
+﻿import { NextRequest, NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { getCurrentAppUser } from "@/lib/supabase/app-auth";
 
@@ -36,7 +36,7 @@ export async function GET(request: NextRequest) {
     let query = supabase
       .from("orders")
       .select(
-        "id, order_code, order_date, closed_date, staff_name, amount, tip, staff_per_order, order_type"
+        "id, order_code, order_date, closed_date, staff_name, amount, tip, staff_per_order, order_type, mang"
       )
       .eq("order_type", "staff")
       .eq("is_closed", true)
@@ -80,6 +80,7 @@ export async function GET(request: NextRequest) {
         amount,
         tip,
         staff_per_order: staffPerOrder,
+        mang: order.mang || "Chưa xác định",
         gross_share: grossShare,
         deduction_20: deduction20,
         salary_share: salaryShare,

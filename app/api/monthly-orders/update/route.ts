@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from "next/server";
+﻿import { NextRequest, NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { getCurrentAppUser } from "@/lib/supabase/app-auth";
 
@@ -47,7 +47,7 @@ export async function PUT(request: NextRequest) {
     const { data: existingOrder, error: findError } = await supabase
       .from("orders")
       .select(
-        "id, order_code, order_date, closed_date, closed_by, amount, tip, staff_per_order, staff_name, order_type, is_closed"
+        "id, order_code, order_date, closed_date, closed_by, amount, tip, staff_per_order, staff_name, order_type, is_closed, mang"
       )
       .eq("id", id)
       .eq("order_type", "staff")
@@ -126,6 +126,12 @@ export async function PUT(request: NextRequest) {
       updateData.staff_per_order = value;
     }
 
+    if (body.mang !== undefined) {
+      const value = String(body.mang || "").trim();
+
+      updateData.mang = value || "Chưa xác định";
+    }
+
     if (body.order_date !== undefined) {
       const value = String(body.order_date || "").trim();
 
@@ -152,7 +158,7 @@ export async function PUT(request: NextRequest) {
       .eq("order_type", "staff")
       .eq("is_closed", true)
       .select(
-        "id, order_code, order_date, closed_date, closed_by, staff_name, amount, tip, staff_per_order, order_type, is_closed"
+        "id, order_code, order_date, closed_date, closed_by, staff_name, amount, tip, staff_per_order, order_type, is_closed, mang"
       )
       .single();
 

@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from "next/server";
+﻿import { NextRequest, NextResponse } from "next/server";
 
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
@@ -18,6 +18,7 @@ type OrderBody = {
   amount?: number | string;
   tip?: number | string;
   staff_per_order?: number | string;
+  mang?: string;
 
   note?: string | null;
 };
@@ -226,6 +227,7 @@ export async function POST(
       amount,
       tip,
       staff_per_order,
+      mang,
       note,
     } = body;
 
@@ -325,6 +327,11 @@ export async function POST(
 
         staff_per_order:
           parsedStaffPerOrder,
+
+        mang:
+          mang == null || !String(mang).trim()
+            ? "Chưa xác định"
+            : String(mang).trim(),
 
         note:
           note == null
@@ -626,6 +633,15 @@ async function updateOrder(
 
       updateData.staff_per_order =
         parsedStaffPerOrder;
+    }
+
+    if (
+      body.mang !== undefined
+    ) {
+      updateData.mang =
+        body.mang == null || !String(body.mang).trim()
+          ? "Chưa xác định"
+          : String(body.mang).trim();
     }
 
     if (

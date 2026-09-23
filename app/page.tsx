@@ -104,6 +104,7 @@ type Order = {
   tip: number;
   staff_per_order: number;
   order_date: string;
+  mang: string;
 };
 
 /* =========================================================
@@ -449,6 +450,7 @@ function OrderEditor({
       tip: 0,
       staff_per_order: 1,
       order_date: "",
+      mang: "Chưa xác định",
     };
 
     onChange([
@@ -489,6 +491,13 @@ function OrderEditor({
     next[index] = {
       ...next[index],
       order_code: value,
+    };
+  }
+
+  if (field === "mang") {
+    next[index] = {
+      ...next[index],
+      mang: value,
     };
   }
 
@@ -559,6 +568,29 @@ function OrderEditor({
                   />
                 </div>
 
+                <div className="order-field">
+                  <label>Mảng</label>
+                  <select
+                    value={order.mang || "Chưa xác định"}
+                    onChange={(e) =>
+                      updateOrder(
+                        index,
+                        "mang",
+                        e.target.value
+                      )
+                    }
+                  >
+                    <option value="Chưa xác định">Chưa xác định</option>
+                    <option value="Chụp Ảnh">Chụp Ảnh</option>
+                    <option value="Edit Ảnh">Edit Ảnh</option>
+                    <option value="Quay Video">Quay Video</option>
+                    <option value="Edit Video">Edit Video</option>
+                    <option value="Harem Đi Chơi">Harem Đi Chơi</option>
+                    <option value="Host Dàn">Host Dàn</option>
+                    <option value="Host Treo">Host Treo</option>
+                    <option value="Host Pin">Host Pin</option>
+                  </select>
+                </div>
                 <div className="order-field">
                   <label>Số tiền đơn (đ)</label>
                   <input
@@ -1590,6 +1622,7 @@ async function saveMonthlyOrderEdit() {
         tip: Number(editingMonthlyOrder.tip),
         order_date: editingMonthlyOrder.order_date,
         staff_per_order: Number(editingMonthlyOrder.staff_per_order),
+        mang: editingMonthlyOrder.mang || "Chưa xác định",
       }),
     });
 
@@ -1805,6 +1838,7 @@ if (Array.isArray(orders)) {
       tip: Number(order.tip ?? 0),
       staff_per_order: Number(order.staff_per_order ?? 1),
       order_date: String(order.order_date ?? ""),
+      mang: String(order.mang ?? "Chưa xác định"),
     };
     /*
      * order_type = "page"
@@ -2232,6 +2266,8 @@ for (const order of newStaffOrders) {
             Number(order.staff_per_order || 1),
 
           note: "",
+          mang:
+            order.mang || "Chưa xác định",
 
           order_type:
             "staff",
@@ -2369,6 +2405,10 @@ const staffPerOrderChanged =
 const dateChanged =
   String(oldOrder.order_date ?? "") !==
   String(order.order_date ?? "");
+const mangChanged =
+  String(oldOrder.mang ?? "Chưa xác định") !==
+  String(order.mang ?? "Chưa xác định");
+
 const codeChanged =
   String(
     oldOrder.order_code ?? ""
@@ -2382,7 +2422,8 @@ if (
   !tipChanged &&
   !codeChanged &&
   !staffPerOrderChanged &&
-  !dateChanged
+  !dateChanged &&
+  !mangChanged
 ) {
   continue;
 }
@@ -2417,23 +2458,26 @@ order_code:
   String(order.order_code ?? "").trim() ||
   String(oldOrder.order_code ?? "").trim(),
 
-staff_name:
-  staffName,
+        staff_name:
+          staffName,
 
-amount:
-  Number(order.amount || 0),
+        amount:
+          Number(order.amount || 0),
 
-tip:
-  Number(order.tip || 0),
+        tip:
+          Number(order.tip || 0),
 
         staff_per_order:
           Number(order.staff_per_order || 1),
 
-order_date:
-  order.order_date,
+        mang:
+          order.mang || "Chưa xác định",
 
-order_type:
-  "staff",
+        order_date:
+          order.order_date,
+
+        order_type:
+          "staff",
         }),
       }
     );
@@ -4167,6 +4211,10 @@ const totalKpiValue =
                               >
                                 Đơn
                               </th>
+
+                              <th style={{ textAlign: "left", padding: "10px" }}>
+                                Mảng
+                              </th>
                               <th style={{ textAlign: "left", padding: "10px" }}>Ngày</th>
 
                               <th
@@ -4253,6 +4301,32 @@ const totalKpiValue =
                                       />
                                     ) : (
                                       order.order_code
+                                    )}
+                                  </td>
+
+                                  <td style={{ padding: "10px" }}>
+                                    {editingMonthlyOrder?.id === order.id ? (
+                                      <select
+                                        value={editingMonthlyOrder.mang || "Chưa xác định"}
+                                        onChange={(e) =>
+                                          setEditingMonthlyOrder({
+                                            ...editingMonthlyOrder,
+                                            mang: e.target.value,
+                                          })
+                                        }
+                                      >
+                                        <option value="Chưa xác định">Chưa xác định</option>
+                                        <option value="Chụp Ảnh">Chụp Ảnh</option>
+                                        <option value="Edit Ảnh">Edit Ảnh</option>
+                                        <option value="Quay Video">Quay Video</option>
+                                        <option value="Edit Video">Edit Video</option>
+                                        <option value="Harem Đi Chơi">Harem Đi Chơi</option>
+                                        <option value="Host Dàn">Host Dàn</option>
+                                        <option value="Host Treo">Host Treo</option>
+                                        <option value="Host Pin">Host Pin</option>
+                                      </select>
+                                    ) : (
+                                      order.mang || "Chưa xác định"
                                     )}
                                   </td>
 
@@ -4386,6 +4460,7 @@ const totalKpiValue =
                                               amount: order.amount ?? 0,
                                               tip: order.tip ?? 0,
                                               staff_per_order: order.staff_per_order ?? 1,
+                                              mang: order.mang || "Chưa xác định",
                                             })
                                           }
                                         >
@@ -5329,5 +5404,8 @@ footer {
   }
 }
 `;
+
+
+
 
 

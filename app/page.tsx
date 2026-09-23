@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useEffect, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
@@ -1567,6 +1567,51 @@ export default function Home() {
 
   const [monthlySalaryError, setMonthlySalaryError] =
     useState("");
+
+  const [editingMonthlyOrder, setEditingMonthlyOrder] = useState<any>(null);
+  const [savingMonthlyOrder, setSavingMonthlyOrder] = useState(false);
+
+async function saveMonthlyOrderEdit() {
+  if (!editingMonthlyOrder) return;
+
+  setSavingMonthlyOrder(true);
+
+  try {
+    const response = await fetch("/api/monthly-orders/update", {
+      method: "PUT",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        id: editingMonthlyOrder.id,
+        month: monthlySalaryMonth,
+        order_code: editingMonthlyOrder.order_code,
+        amount: Number(editingMonthlyOrder.amount),
+        tip: Number(editingMonthlyOrder.tip),
+        order_date: editingMonthlyOrder.order_date,
+        staff_per_order: Number(editingMonthlyOrder.staff_per_order),
+      }),
+    });
+
+    const result = await response.json();
+
+    if (!response.ok) {
+      throw new Error(result.error || "Không thể sửa đơn.");
+    }
+
+    alert("Đã cập nhật đơn đã chốt.");
+    setEditingMonthlyOrder(null);
+    window.location.reload();
+  } catch (error) {
+    alert(
+      error instanceof Error
+        ? error.message
+        : "Không thể sửa đơn đã chốt."
+    );
+  } finally {
+    setSavingMonthlyOrder(false);
+  }
+}
 
   /* =======================================================
   useEffect(() => {
@@ -4179,6 +4224,16 @@ const totalKpiValue =
                               >
                                 Tổng nhận
                               </th>
+{isAdmin && (
+  <th
+    style={{
+      textAlign: "center",
+      padding: "10px",
+    }}
+  >
+    Thao tác
+  </th>
+)} 
                             </tr>
                           </thead>
 
@@ -4186,86 +4241,161 @@ const totalKpiValue =
                             {monthlySalary.orders.map(
                               (order: any) => (
                                 <tr key={order.id}>
-                                  <td
-                                    style={{
-                                      padding: "10px",
-                                    }}
-                                  >
-                                    {order.order_code}
+                                  <td style={{ padding: "10px" }}>
+                                    {editingMonthlyOrder?.id === order.id ? (
+                                      <input
+                                        value={editingMonthlyOrder.order_code ?? ""}
+                                        onChange={(e) =>
+                                          setEditingMonthlyOrder({
+                                            ...editingMonthlyOrder,
+                                            order_code: e.target.value,
+                                          })
+                                        }
+                                        style={{ width: "120px" }}
+                                      />
+                                    ) : (
+                                      order.order_code
+                                    )}
                                   </td>
 
                                   <td style={{ padding: "10px" }}>
-                                    {order.order_date ? new Date(order.order_date).toLocaleDateString("vi-VN") : "-"}
+                                    {editingMonthlyOrder?.id === order.id ? (
+                                      <input
+                                        type="date"
+                                        value={editingMonthlyOrder.order_date ?? ""}
+                                        onChange={(e) =>
+                                          setEditingMonthlyOrder({
+                                            ...editingMonthlyOrder,
+                                            order_date: e.target.value,
+                                          })
+                                        }
+                                      />
+                                    ) : (
+                                      order.order_date
+                                        ? new Date(order.order_date).toLocaleDateString("vi-VN")
+                                        : "-"
+                                    )}
                                   </td>
 
-                                  <td
-                                    style={{
-                                      padding: "10px",
-                                      textAlign:
-                                        "right",
-                                    }}
-                                  >
-                                    {money(order.amount)}
+                                  <td style={{ padding: "10px", textAlign: "right" }}>
+                                    {editingMonthlyOrder?.id === order.id ? (
+                                      <input
+                                        type="number"
+                                        min="0"
+                                        value={editingMonthlyOrder.amount ?? 0}
+                                        onChange={(e) =>
+                                          setEditingMonthlyOrder({
+                                            ...editingMonthlyOrder,
+                                            amount: e.target.value,
+                                          })
+                                        }
+                                        style={{ width: "120px" }}
+                                      />
+                                    ) : (
+                                      money(order.amount)
+                                    )}
                                   </td>
 
-                                  <td
-                                    style={{
-                                      padding: "10px",
-                                      textAlign:
-                                        "center",
-                                    }}
-                                  >
-                                    {order.staff_per_order}
+                                  <td style={{ padding: "10px", textAlign: "center" }}>
+                                    {editingMonthlyOrder?.id === order.id ? (
+                                      <input
+                                        type="number"
+                                        min="1"
+                                        value={editingMonthlyOrder.staff_per_order ?? 1}
+                                        onChange={(e) =>
+                                          setEditingMonthlyOrder({
+                                            ...editingMonthlyOrder,
+                                            staff_per_order: e.target.value,
+                                          })
+                                        }
+                                        style={{ width: "70px" }}
+                                      />
+                                    ) : (
+                                      order.staff_per_order
+                                    )}
                                   </td>
 
-                                  <td
-                                    style={{
-                                      padding: "10px",
-                                      textAlign:
-                                        "right",
-                                    }}
-                                  >
-                                    {money(
-                                      order.deduction_20
+                                  <td style={{ padding: "10px", textAlign: "right" }}>
+                                    {money(order.deduction_20)}
+                                  </td>
+
+                                  <td style={{ padding: "10px", textAlign: "right" }}>
+                                    {money(order.salary_share)}
+                                  </td>
+
+                                  <td style={{ padding: "10px", textAlign: "right" }}>
+                                    {editingMonthlyOrder?.id === order.id ? (
+                                      <input
+                                        type="number"
+                                        min="0"
+                                        value={editingMonthlyOrder.tip ?? 0}
+                                        onChange={(e) =>
+                                          setEditingMonthlyOrder({
+                                            ...editingMonthlyOrder,
+                                            tip: e.target.value,
+                                          })
+                                        }
+                                        style={{ width: "100px" }}
+                                      />
+                                    ) : (
+                                      money(order.tip_share)
                                     )}
                                   </td>
 
                                   <td
                                     style={{
                                       padding: "10px",
-                                      textAlign:
-                                        "right",
+                                      textAlign: "right",
+                                      fontWeight: 800,
                                     }}
                                   >
-                                    {money(
-                                      order.salary_share
-                                    )}
+                                    {money(order.total)}
                                   </td>
 
-                                  <td
-                                    style={{
-                                      padding: "10px",
-                                      textAlign:
-                                        "right",
-                                    }}
-                                  >
-                                    {money(
-                                      order.tip_share
-                                    )}
-                                  </td>
+                                  {isAdmin && (
+                                    <td
+                                      style={{
+                                        padding: "10px",
+                                        textAlign: "center",
+                                        whiteSpace: "nowrap",
+                                      }}
+                                    >
+                                      {editingMonthlyOrder?.id === order.id ? (
+                                        <>
+                                          <button
+                                            type="button"
+                                            onClick={saveMonthlyOrderEdit}
+                                            disabled={savingMonthlyOrder}
+                                          >
+                                            {savingMonthlyOrder ? "Đang lưu..." : "Lưu"}
+                                          </button>
 
-                                  <td
-                                    style={{
-                                      padding: "10px",
-                                      textAlign:
-                                        "right",
-                                        fontWeight: 800,
-                                    }}
-                                  >
-                                    {money(
-                                      order.total
-                                    )}
-                                  </td>
+                                          <button
+                                            type="button"
+                                            onClick={() => setEditingMonthlyOrder(null)}
+                                            disabled={savingMonthlyOrder}
+                                          >
+                                            Hủy
+                                          </button>
+                                        </>
+                                      ) : (
+                                        <button
+                                          type="button"
+                                          onClick={() =>
+                                            setEditingMonthlyOrder({
+                                              ...order,
+                                              order_date: order.order_date ?? "",
+                                              amount: order.amount ?? 0,
+                                              tip: order.tip ?? 0,
+                                              staff_per_order: order.staff_per_order ?? 1,
+                                            })
+                                          }
+                                        >
+                                          Sửa
+                                        </button>
+                                      )}
+                                    </td>
+                                  )}
                                 </tr>
                               )
                             )}
@@ -5201,4 +5331,5 @@ footer {
   }
 }
 `;
+
 

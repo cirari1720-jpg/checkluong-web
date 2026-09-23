@@ -1613,7 +1613,7 @@ async function saveMonthlyOrderEdit() {
   }
 }
 
-  /* =======================================================
+  /* ======================================================= */
   useEffect(() => {
     if (!currentUser || activeTab !== "salary") return;
 
@@ -1670,8 +1670,6 @@ async function saveMonthlyOrderEdit() {
       cancelled = true;
     };
   }, [currentUser, activeTab, monthlySalaryMonth]);
-     LOAD
-  ======================================================= */
 
  useEffect(() => {
   if (!currentUser) return;

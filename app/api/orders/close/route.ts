@@ -1,4 +1,4 @@
-﻿import { NextRequest, NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { getCurrentAppUser } from "@/lib/supabase/app-auth";
 
@@ -16,11 +16,19 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
 
     const staffName = String(body?.staff_name || "").trim();
+    const orderType = String(body?.order_type || "staff").trim().toLowerCase();
     const closedDate = String(body?.closed_date || "").trim();
 
     if (!staffName) {
       return NextResponse.json(
         { error: "Thiếu tên Staff" },
+        { status: 400 }
+      );
+    }
+
+    if (orderType !== "staff" && orderType !== "page") {
+      return NextResponse.json(
+        { error: "Invalid order type" },
         { status: 400 }
       );
     }
@@ -38,7 +46,7 @@ export async function POST(request: NextRequest) {
       .from("orders")
       .select("id")
       .eq("staff_name", staffName)
-      .eq("order_type", "staff")
+      .eq("order_type", orderType)
       .eq("is_closed", false);
 
     if (findError) {

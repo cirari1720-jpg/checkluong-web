@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import { useEffect, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
@@ -344,12 +344,16 @@ function OrderEditor({
   orders,
   onChange,
   staffName,
+  orderType,
+
 }: {
   title: string;
   description: string;
   orders: Order[];
   onChange: (orders: Order[]) => void;
   staffName?: string;
+  orderType?: "staff" | "page";
+
 }) {
   const [closeDate, setCloseDate] = useState(() => {
     const now = new Date();
@@ -829,6 +833,7 @@ function ReadonlyOrders({
   orders: Order[];
   showSalaryDetails?: boolean;
   staffName?: string;
+
 }) {
   const [openOrders, setOpenOrders] = useState<Record<string, boolean>>({});
 
@@ -3927,6 +3932,7 @@ const totalKpiValue =
                   title="Đơn đã đi"
                   description="Admin có thể thêm, sửa hoặc xóa đơn Staff đã đi."
                   orders={staffOrders}
+                  orderType="staff"
                   staffName={viewingName}
                   onChange={(orders) => {
                     updatePerson(
@@ -3956,6 +3962,7 @@ const totalKpiValue =
                       title="Đơn đã trực"
                       description="Admin có thể thêm, sửa hoặc xóa đơn Page đã trực."
                       orders={pageOrders}
+                      orderType="page"
                       onChange={(orders) => {
                         updatePerson(
                           (person) => ({

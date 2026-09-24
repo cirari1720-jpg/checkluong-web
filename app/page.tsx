@@ -1603,6 +1603,37 @@ export default function Home() {
   const [editingMonthlyOrder, setEditingMonthlyOrder] = useState<any>(null);
   const [savingMonthlyOrder, setSavingMonthlyOrder] = useState(false);
 
+async function deleteMonthlyOrder(order: any) {
+  const id = Number(order?.id);
+  if (!Number.isInteger(id) || id <= 0) {
+    alert("ID don khong hop le.");
+    return;
+  }
+
+  if (!window.confirm("Ban co chac muon xoa don nay khong?")) {
+    return;
+  }
+
+  try {
+    const response = await fetch("/api/orders", {
+      method: "DELETE",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ id: id, order_id: id }),
+    });
+
+    const result = await response.json().catch(() => ({}));
+
+    if (!response.ok) {
+      throw new Error(result?.error || "Khong the xoa don.");
+    }
+
+    alert("Da xoa don thanh cong.");
+    window.location.reload();
+  } catch (error) {
+    alert(error instanceof Error ? error.message : "Khong the xoa don.");
+  }
+}
+
 async function saveMonthlyOrderEdit() {
   if (!editingMonthlyOrder) return;
 
@@ -4451,6 +4482,7 @@ const totalKpiValue =
                                           </button>
                                         </>
                                       ) : (
+                                        <>
                                         <button
                                           type="button"
                                           onClick={() =>
@@ -4466,6 +4498,8 @@ const totalKpiValue =
                                         >
                                           Sửa
                                         </button>
+                                        <button type="button" onClick={() => deleteMonthlyOrder(order)} style={{ marginLeft: "6px", background: "#ef4444", color: "#fff", border: "none", borderRadius: "6px", padding: "6px 10px", cursor: "pointer", fontWeight: 600 }}>Xoa</button>
+                                        </>
                                       )}
                                     </td>
                                   )}
@@ -5404,6 +5438,12 @@ footer {
   }
 }
 `;
+
+
+
+
+
+
 
 
 

@@ -1628,7 +1628,17 @@ async function deleteMonthlyOrder(order: any) {
     }
 
     alert("Da xoa don thanh cong.");
-    window.location.reload();
+
+    setMonthlySalary((prev: any) => {
+      if (!prev) return prev;
+
+      return {
+        ...prev,
+        orders: Array.isArray(prev.orders)
+          ? prev.orders.filter((item: any) => Number(item?.id) !== id)
+          : prev.orders,
+      };
+    });
   } catch (error) {
     alert(error instanceof Error ? error.message : "Khong the xoa don.");
   }
@@ -5438,6 +5448,7 @@ footer {
   }
 }
 `;
+
 
 
 

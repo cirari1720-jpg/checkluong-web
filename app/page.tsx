@@ -1618,7 +1618,7 @@ async function deleteMonthlyOrder(order: any) {
     const response = await fetch("/api/orders", {
       method: "DELETE",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ id: id, order_id: id }),
+      body: JSON.stringify({ id: id, order_id: id, order_type: "staff", allow_closed_delete: true }),
     });
 
     const result = await response.json().catch(() => ({}));
@@ -5438,6 +5438,7 @@ footer {
   }
 }
 `;
+
 
 
 

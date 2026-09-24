@@ -970,6 +970,11 @@ export async function DELETE(
 
     const orderType =
       String(body.order_type ?? "staff").trim();
+    const allowClosedDelete =
+      (body as OrderBody & {
+        allow_closed_delete?: boolean;
+      }).allow_closed_delete === true &&
+      orderType === "staff";
 
     if (
       id !== null &&
@@ -987,14 +992,19 @@ export async function DELETE(
      * 1. Ưu tiên xóa bằng ID thật.
      */
     if (id !== null) {
+      let deleteQuery = admin
+        .from("orders")
+        .delete()
+        .eq("id", id);
+
+      if (!allowClosedDelete) {
+        deleteQuery = deleteQuery.eq("is_closed", false);
+      }
+
       const {
         data,
         error,
-      } = await admin
-        .from("orders")
-        .delete()
-        .eq("id", id)
-        .eq("is_closed", false)
+      } = await deleteQuery
         .select()
         .maybeSingle();
 
@@ -1048,17 +1058,21 @@ export async function DELETE(
       );
     }
 
-    const {
-      data: matches,
-      error: findError,
-    } = await admin
-      .from("orders")
-      .select("id, order_code, staff_name, order_type, amount, tip")
-      .eq("staff_name", staffName)
-      .eq("order_code", orderCode)
-      .eq("order_type", orderType)
-      .eq("is_closed", false)
-      .limit(2);
+          let findQuery = admin
+        .from("orders")
+        .select("id, order_code, staff_name, order_type, amount, tip")
+        .eq("staff_name", staffName)
+        .eq("order_code", orderCode)
+        .eq("order_type", orderType);
+
+      if (!allowClosedDelete) {
+        findQuery = findQuery.eq("is_closed", false);
+      }
+
+      const {
+        data: matches,
+        error: findError,
+      } = await findQuery.limit(2);
 
     if (findError) {
       console.error(
@@ -1167,6 +1181,12 @@ function order_dateIsProvided(
 ) {
   return body.order_date !== undefined;
 }
+
+
+
+
+
+
 
 
 

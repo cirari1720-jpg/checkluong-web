@@ -1675,7 +1675,28 @@ async function saveMonthlyOrderEdit() {
 
     alert("Đã cập nhật đơn đã chốt.");
     setEditingMonthlyOrder(null);
-    window.location.reload();
+    setMonthlySalary((prev: any) => {
+      if (!prev) return prev;
+
+      return {
+        ...prev,
+        orders: Array.isArray(prev.orders)
+          ? prev.orders.map((item: any) =>
+              Number(item?.id) === Number(editingMonthlyOrder.id)
+                ? {
+                    ...item,
+                    order_code: editingMonthlyOrder.order_code,
+                    amount: Number(editingMonthlyOrder.amount),
+                    tip: Number(editingMonthlyOrder.tip),
+                    order_date: editingMonthlyOrder.order_date,
+                    staff_per_order: Number(editingMonthlyOrder.staff_per_order),
+                    mang: editingMonthlyOrder.mang,
+                  }
+                : item
+            )
+          : prev.orders,
+      };
+    });
   } catch (error) {
     alert(
       error instanceof Error
@@ -5448,6 +5469,7 @@ footer {
   }
 }
 `;
+
 
 
 
